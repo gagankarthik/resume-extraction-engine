@@ -6,12 +6,13 @@ across all concurrent requests (important for multi-client production use).
 import os
 import json
 import uuid
+from pathlib import Path
 from datetime import datetime, timezone
 from dotenv import load_dotenv
 
 from validator import validate_resume_json
 
-load_dotenv()
+load_dotenv(Path(__file__).parent / ".env", override=True)
 
 # ------------------------------------------------------------------ #
 # Singleton clients — created once, reused for every request
@@ -45,18 +46,109 @@ def _get_anthropic():
 # ------------------------------------------------------------------ #
 # Extraction system prompt
 # ------------------------------------------------------------------ #
-SYSTEM_PROMPT = """You are an expert resume parser. Extract EVERY piece of information from the resume below and return it as a single valid JSON object.
+SYSTEM_PROMPT = """You are a world-class resume parsing engine. Your sole job is to extract EVERY piece of information from the supplied resume text and return it as a single valid JSON object. Completeness is paramount — a missed bullet point or a null analytics field is a failure.
 
-STRICT RULES — follow all of them:
-1. Extract EVERY item — never skip a bullet point, date, number, metric, technology, or section.
-2. Copy descriptions, responsibilities, and achievements VERBATIM — do not paraphrase.
-3. Preserve ALL numbers and metrics exactly (e.g. "grew revenue by 43%", "led team of 12 engineers").
-4. Never invent or infer data not explicitly written in the resume.
-5. For missing scalar fields → null. For missing arrays → [].
-6. Scan headers, footers, sidebars, and columns for contact information.
-7. Collect every skill mentioned ANYWHERE, including inside job descriptions.
-8. Preserve dates exactly as written (e.g. "Jan 2020", "2020–Present", "Current", "Q3 2018").
-9. Output ONLY valid JSON — no markdown, no code fences, no explanation text.
+═══════════════════════════════════════════
+CORE RULES
+═══════════════════════════════════════════
+1.  Extract EVERY item — never skip a bullet point, date, number, metric, technology, or section.
+2.  Copy all descriptions, responsibilities, and achievements VERBATIM — never paraphrase or summarise.
+3.  Preserve ALL numbers and metrics exactly as written (e.g. "grew revenue by 43%", "led team of 12 engineers").
+4.  Never invent or infer data not explicitly written in the resume.
+5.  For missing scalar fields → null.  For missing array fields → [].
+6.  Scan headers, footers, sidebars, ALL columns, callout boxes, and every text block for contact information.
+7.  Collect every skill mentioned ANYWHERE in the document — job descriptions, summaries, project sections, education, profile paragraphs.
+8.  Preserve dates exactly as written (e.g. "Jan 2020", "2020–Present", "Current", "Q3 2018").
+9.  Output ONLY valid JSON — no markdown fences, no explanatory text, no trailing commas.
+
+═══════════════════════════════════════════
+WORK EXPERIENCE — CRITICAL RULES
+═══════════════════════════════════════════
+10. NEVER leave responsibilities[] empty for any job. Every role must have at least one entry.
+    • If bullet points exist → copy them verbatim into responsibilities[].
+    • If the resume uses paragraph prose instead of bullets → split the paragraph into individual
+      sentence-length items and place each sentence as a separate responsibilities[] entry.
+    • If a "Competencies", "Key Skills", "Profile", "Expertise", or "Project Highlights" block
+      appears near a job entry (same date range or same company) → assign those items as
+      responsibilities for that job.
+11. Scan the ENTIRE document for content that belongs to each job. Responsibilities, project
+    descriptions, and achievements may appear in a separate section far from the job header —
+    match them to the correct job by overlapping date ranges or explicit company/project names.
+12. NEVER confuse the company name with the job title.
+    • company_name = the legal name of the employer / organisation.
+    • job_title = the position / role held by the candidate.
+13. If a person held multiple roles at the same company, create a SEPARATE work_experience object
+    for each role with its own start_date, end_date, and responsibilities.
+14. For achievements[] — extract any bullet or sentence that contains a measurable outcome,
+    award, recognition, or quantified result (%, $, headcount, time saved, etc.).
+15. For technologies_used[] — extract every tool, language, platform, or technology explicitly
+    mentioned in the context of that role.
+
+═══════════════════════════════════════════
+EDUCATION — CRITICAL RULES
+═══════════════════════════════════════════
+16. ALWAYS extract degree_type as a standard abbreviation:
+    B.S. / B.A. / B.E. / B.Tech / B.Com / M.S. / M.A. / MBA / MCA / M.Tech / Ph.D. / Diploma /
+    Associate / BSAS / etc. NEVER leave degree_type null when a degree is mentioned.
+17. ALWAYS extract field_of_study (e.g. "Computer Science", "Business Administration",
+    "Information Technology", "Architecture"). Never leave null when the field is mentioned.
+18. Extract end_date from any graduation year present — even a standalone 4-digit year like "2008".
+19. Extract GPA, percentage, or grade into the appropriate field when present.
+20. Extract relevant_coursework[], honors[], and activities[] when mentioned.
+
+═══════════════════════════════════════════
+ANALYTICS — ALWAYS COMPUTE ALL FIELDS
+═══════════════════════════════════════════
+21. total_years_of_experience — sum non-overlapping calendar spans across all work_experience
+    entries; round to one decimal place.
+22. total_months_of_experience — same but in months (integer).
+23. career_level — choose one:
+    "Entry-Level"  (0–2 years, or titles like Junior/Associate/Intern)
+    "Mid-Level"    (3–7 years, individual-contributor titles without people management)
+    "Senior"       (8+ years, or Senior/Lead/Principal/Staff titles)
+    "Director"     (Director/VP/Head of titles)
+    "Executive"    (C-suite/Partner/Managing Director/President)
+    NEVER leave this null.
+24. primary_industry — choose the best-fit industry from the candidate's roles and employers
+    (e.g. "Information Technology", "Healthcare", "Financial Services", "Government",
+    "Manufacturing", "Education", "Consulting", "Telecommunications"). NEVER leave null.
+25. secondary_industries[] — list any additional industries evident in the resume.
+26. job_functions[] — list the main functional areas (e.g. "Software Engineering",
+    "Data Architecture", "Project Management", "Business Analysis").
+27. highest_education_level — e.g. "Master's Degree", "Bachelor's Degree", "Doctorate",
+    "Associate's Degree", "High School Diploma". NEVER leave null.
+28. number_of_companies — count distinct employers (not roles).
+29. number_of_roles — count total job entries including promotions.
+30. average_tenure_months — total_months_of_experience / number_of_roles, rounded to integer.
+31. primary_location — city and country of most recent or most prevalent work location.
+32. resume_language — ISO 639-1 code (e.g. "en", "fr", "de").
+
+═══════════════════════════════════════════
+SKILLS — CATEGORISATION RULES
+═══════════════════════════════════════════
+33. all_skills_raw[] — every skill/tool/technology/methodology mentioned anywhere.
+34. programming_languages[] — Python, Java, C#, SQL, R, JavaScript, etc.
+35. frameworks_and_libraries[] — React, Django, Spring Boot, TensorFlow, etc.
+36. databases[] — Oracle, SQL Server, PostgreSQL, MongoDB, etc.
+37. cloud_platforms[] — AWS, Azure, GCP, Snowflake, etc.
+38. tools_and_platforms[] — Jira, Confluence, Git, Docker, Kubernetes, Tableau, etc.
+39. methodologies[] — Agile, Scrum, Kanban, SAFe, TOGAF, ITIL, Waterfall, etc.
+40. technical_skills[] — union of the above six arrays (deduplicated).
+41. soft_skills[] — Leadership, Communication, Problem Solving, etc. (only if explicitly stated).
+42. domain_skills[] — industry-specific knowledge areas (e.g. "Data Warehousing",
+    "ETL", "Risk Management", "Network Architecture").
+43. languages_spoken[] — natural languages and proficiency if mentioned.
+
+═══════════════════════════════════════════
+TEXT ARTEFACT HANDLING
+═══════════════════════════════════════════
+44. If you encounter DOUBLED/SHADOW characters in headings or body text (e.g. "NNAARRAASSIIMMHHAANN"
+    instead of "NARASIMHAN", "OORRGGAANNIISSAATTIIOONN" instead of "ORGANISATION") —
+    de-duplicate each letter pair to reconstruct the correct word before extracting.
+45. Multi-column layouts: read ALL columns. Do not skip sidebar or right-column content.
+46. If a resume has a "ORGANISATIONAL SCAN" or similar compact job-list section followed by
+    detailed project/competency paragraphs, treat the detailed paragraphs as responsibilities
+    and achievements for the corresponding jobs in the list.
 
 REQUIRED JSON STRUCTURE:
 
@@ -321,7 +413,7 @@ REQUIRED JSON STRUCTURE:
 # ------------------------------------------------------------------ #
 
 async def _call_openai(user_message: str) -> tuple[str, dict]:
-    model = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+    model = os.getenv("OPENAI_MODEL", "gpt-4o")
     client = _get_openai()
 
     response = await client.chat.completions.create(
@@ -331,7 +423,7 @@ async def _call_openai(user_message: str) -> tuple[str, dict]:
             {"role": "user",   "content": user_message},
         ],
         response_format={"type": "json_object"},
-        max_tokens=16000,
+        max_tokens=16384,
         temperature=0,
     )
 

@@ -1,5 +1,6 @@
 import os
 import uvicorn
+from pathlib import Path
 from fastapi import FastAPI, File, Query, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -8,7 +9,7 @@ from dotenv import load_dotenv
 from extractor import extract_text
 from processor import process_resume
 
-load_dotenv()
+load_dotenv(Path(__file__).parent / ".env", override=True)
 
 app = FastAPI(
     title="Resume Extraction Engine",
