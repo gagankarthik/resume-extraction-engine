@@ -25,3 +25,9 @@ variable "anthropic_model" {
   type    = string
   default = "claude-opus-4-7"
 }
+
+variable "use_orchestrator" {
+  type        = string
+  description = "true = multi-agent pipeline, false = single-shot LLM call"
+  default     = "true"
+}

@@ -83,6 +83,7 @@ jobs:
           TF_VAR_openai_model:      ${{ secrets.OPENAI_MODEL }}
           TF_VAR_anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           TF_VAR_anthropic_model:   ${{ secrets.ANTHROPIC_MODEL }}
+          TF_VAR_use_orchestrator:  ${{ secrets.USE_ORCHESTRATOR }}
 
       - name: Terraform Apply
         run: terraform apply -auto-approve tfplan
@@ -92,6 +93,7 @@ jobs:
           TF_VAR_openai_model:      ${{ secrets.OPENAI_MODEL }}
           TF_VAR_anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           TF_VAR_anthropic_model:   ${{ secrets.ANTHROPIC_MODEL }}
+          TF_VAR_use_orchestrator:  ${{ secrets.USE_ORCHESTRATOR }}
 
       - name: Print Function URL
         run: terraform output function_url
