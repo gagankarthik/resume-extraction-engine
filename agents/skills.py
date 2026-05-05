@@ -2,22 +2,24 @@
 from __future__ import annotations
 from .base import BaseAgent
 
-SKILLS_SYSTEM = """Extract ALL skills mentioned ANYWHERE in the resume — job descriptions, summaries, project sections, education, profile paragraphs.
+SKILLS_SYSTEM = """Extract ONLY skills that are explicitly named in the resume. Do NOT infer, generate, or extract activities or tasks from job responsibilities.
 
-Categorize into the following arrays:
-- programming_languages: Python, Java, C#, SQL, R, JavaScript, TypeScript, etc.
-- frameworks_and_libraries: React, Django, Spring Boot, TensorFlow, .NET, etc.
-- databases: Oracle, SQL Server, PostgreSQL, MongoDB, MySQL, etc.
-- cloud_platforms: AWS, Azure, GCP, Snowflake, Databricks, etc.
-- tools_and_platforms: Jira, Confluence, Git, Docker, Kubernetes, Tableau, Power BI, etc.
-- operating_systems: Windows, Linux, macOS, Unix, RHEL, etc.
-- methodologies: Agile, Scrum, Kanban, SAFe, TOGAF, ITIL, Waterfall, etc.
-- domain_skills: industry-specific knowledge (ETL, Data Warehousing, Risk Management, etc.)
-- design_skills: UI/UX, Figma, Adobe XD, Photoshop, etc.
-- soft_skills: Leadership, Communication, etc. (ONLY if explicitly stated)
-- other_skills: anything that doesn't fit above
-- all_skills_raw: union of everything, deduplicated
-- technical_skills: union of programming_languages through design_skills, deduplicated
+A skill is a named technology, tool, platform, language, framework, methodology, or concept that appears verbatim (or near-verbatim) in the resume. Job duties, action verbs, and activity phrases are NOT skills.
+
+Categorize:
+- programming_languages: e.g. Python, Java, C#, SQL, R, JavaScript, TypeScript
+- frameworks_and_libraries: e.g. React, Django, Spring Boot, TensorFlow, .NET, FastAPI
+- databases: e.g. Oracle, SQL Server, PostgreSQL, MongoDB, MySQL, Redshift
+- cloud_platforms: e.g. AWS, Azure, GCP, Snowflake, Databricks
+- tools_and_platforms: e.g. Jira, Git, Docker, Kubernetes, Tableau, Power BI, Airflow
+- operating_systems: e.g. Windows, Linux, macOS, Unix, RHEL
+- methodologies: e.g. Agile, Scrum, Kanban, SAFe, ITIL, CI/CD, DevOps
+- domain_skills: named domain concepts only — short noun terms like ETL, Data Warehousing, Machine Learning, NLP, Computer Vision. NOT action phrases or multi-clause descriptions. Each entry must be a recognizable industry concept of 1-3 words.
+- design_skills: e.g. UI/UX, Figma, Adobe XD, Photoshop
+- soft_skills: ONLY if the resume explicitly lists them as skills (e.g. Leadership, Communication)
+- other_skills: named skills that don't fit any category above
+- all_skills_raw: deduplicated union of all categories above
+- technical_skills: deduplicated union of programming_languages through design_skills
 
 Return ONLY this JSON:
 {
