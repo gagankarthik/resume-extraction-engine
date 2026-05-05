@@ -10,6 +10,7 @@ env:
   PYTHON_VERSION: "3.11"
   AWS_REGION: us-east-2
   TF_VERSION: "1.8.0"
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   # ── Lint ─────────────────────────────────────────────────────────────────────
