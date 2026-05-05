@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 from dotenv import load_dotenv
 
 from validator import validate_resume_json
+from orchestrator import get_orchestrator
 
 load_dotenv(Path(__file__).parent / ".env", override=True)
 
@@ -500,26 +501,34 @@ async def process_resume(
         "Extract every detail. Return valid JSON only."
     )
 
-    provider = os.getenv("MODEL_PROVIDER", "openai").lower()
-    if provider == "anthropic":
-        raw_json_text, llm_info = await _call_anthropic(user_message)
+    # ── Choose engine: multi-agent orchestrator (default) or single-shot ──
+    use_orchestrator = os.getenv("USE_ORCHESTRATOR", "true").lower() in ("1", "true", "yes")
+
+    if use_orchestrator:
+        orchestrator = get_orchestrator()
+        extracted = await orchestrator.run(raw_text)
+        llm_info = {"provider": "orchestrator", "model": "multi-agent"}
     else:
-        raw_json_text, llm_info = await _call_openai(user_message)
+        provider = os.getenv("MODEL_PROVIDER", "openai").lower()
+        if provider == "anthropic":
+            raw_json_text, llm_info = await _call_anthropic(user_message)
+        else:
+            raw_json_text, llm_info = await _call_openai(user_message)
 
-    # Strip accidental markdown fences
-    text = raw_json_text.strip()
-    if text.startswith("```"):
-        lines = text.split("\n")
-        end = len(lines) - 1 if lines and lines[-1].strip() == "```" else len(lines)
-        text = "\n".join(lines[1:end])
+        # Strip accidental markdown fences
+        text = raw_json_text.strip()
+        if text.startswith("```"):
+            lines = text.split("\n")
+            end = len(lines) - 1 if lines and lines[-1].strip() == "```" else len(lines)
+            text = "\n".join(lines[1:end])
 
-    try:
-        extracted: dict = json.loads(text)
-    except json.JSONDecodeError as exc:
-        raise ValueError(
-            f"LLM returned invalid JSON ({exc}). "
-            f"First 400 chars of response:\n{text[:400]}"
-        )
+        try:
+            extracted = json.loads(text)
+        except json.JSONDecodeError as exc:
+            raise ValueError(
+                f"LLM returned invalid JSON ({exc}). "
+                f"First 400 chars of response:\n{text[:400]}"
+            )
 
     extracted["_metadata"] = {
         "request_id":        request_id,
