@@ -1,0 +1,96 @@
+name: CI / Deploy to AWS Lambda
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  PYTHON_VERSION: "3.11"
+  AWS_REGION: us-east-2
+  TF_VERSION: "1.8.0"
+
+jobs:
+  # ── Lint ─────────────────────────────────────────────────────────────────────
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - run: pip install ruff
+      - run: ruff check .
+
+  # ── Build + Deploy (main only) ────────────────────────────────────────────────
+  deploy:
+    name: Deploy via Terraform
+    needs: lint
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    defaults:
+      run:
+        working-directory: terraform
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # ── Python + build Lambda zip ─────────────────────────────────────────
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Build Lambda zip
+        working-directory: .
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt --target ./package --no-cache-dir
+          rsync -a --exclude='package' --exclude='.github' \
+                   --exclude='terraform' --exclude='__pycache__' \
+                   --exclude='*.pyc' --exclude='.env' --exclude='.git' \
+                   --exclude='*.md' . ./package/
+          cd package && zip -r ../lambda.zip . -x "*.pyc" -x "__pycache__/*"
+          echo "Zip size: $(du -sh ../lambda.zip | cut -f1)"
+
+      # ── AWS credentials ───────────────────────────────────────────────────
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      # ── Terraform ─────────────────────────────────────────────────────────
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Plan
+        run: terraform plan -out=tfplan
+        env:
+          TF_VAR_model_provider:    ${{ secrets.MODEL_PROVIDER }}
+          TF_VAR_openai_api_key:    ${{ secrets.OPENAI_API_KEY }}
+          TF_VAR_openai_model:      ${{ secrets.OPENAI_MODEL }}
+          TF_VAR_anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          TF_VAR_anthropic_model:   ${{ secrets.ANTHROPIC_MODEL }}
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve tfplan
+        env:
+          TF_VAR_model_provider:    ${{ secrets.MODEL_PROVIDER }}
+          TF_VAR_openai_api_key:    ${{ secrets.OPENAI_API_KEY }}
+          TF_VAR_openai_model:      ${{ secrets.OPENAI_MODEL }}
+          TF_VAR_anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          TF_VAR_anthropic_model:   ${{ secrets.ANTHROPIC_MODEL }}
+
+      - name: Print Function URL
+        run: terraform output function_url
