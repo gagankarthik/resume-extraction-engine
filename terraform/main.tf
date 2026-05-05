@@ -95,7 +95,7 @@ resource "aws_lambda_function" "api" {
 
   s3_bucket        = aws_s3_bucket.packages.id
   s3_key           = aws_s3_object.zip.key
-  source_code_hash = aws_s3_object.zip.etag
+  source_code_hash = filebase64sha256("${path.module}/../lambda.zip")
 
   environment {
     variables = {
