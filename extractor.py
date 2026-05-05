@@ -2,10 +2,13 @@
 Resume text extraction — no OCR dependency.
   PDF  → pdfplumber (layout-aware, table-aware, repeated-header removal)
   DOCX → python-docx (paragraphs + tables + headers/footers in doc order)
+           fallback: raw ZIP extraction of word/document.xml
   TXT  → UTF-8 decode
 All paths run through normalizer.py before returning.
 """
 import io
+import zipfile
+from xml.etree import ElementTree as ET
 
 import pdfplumber
 from docx import Document
@@ -109,7 +112,17 @@ def _extract_one_pdf_page(page) -> str:
 # ------------------------------------------------------------------ #
 
 def _extract_docx(file_bytes: bytes) -> ExtractionResult:
-    doc = Document(io.BytesIO(file_bytes))
+    try:
+        doc = Document(io.BytesIO(file_bytes))
+    except Exception as docx_exc:
+        try:
+            return _extract_docx_zip_fallback(file_bytes)
+        except Exception:
+            raise RuntimeError(
+                f"Could not read this Word file ({docx_exc}). "
+                "Try re-saving it as .docx in Microsoft Word, or convert to PDF."
+            ) from docx_exc
+
     parts: list[str] = []
 
     # Section headers
@@ -157,6 +170,31 @@ def _extract_docx(file_bytes: bytes) -> ExtractionResult:
     combined = "\n".join(parts)
     normalized = normalize_text(combined)
     return normalized, 1, {"method": "docx"}
+
+
+def _extract_docx_zip_fallback(file_bytes: bytes) -> ExtractionResult:
+    """Extract text from word/document.xml directly when python-docx rejects the file."""
+    W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+
+    with zipfile.ZipFile(io.BytesIO(file_bytes)) as z:
+        names = z.namelist()
+        doc_xml = next(
+            (n for n in names if n == "word/document.xml"),
+            next((n for n in names if "document" in n.lower() and n.endswith(".xml")), None),
+        )
+        if doc_xml is None:
+            raise RuntimeError("No document.xml found inside ZIP archive")
+        data = z.read(doc_xml)
+
+    root = ET.fromstring(data)
+    parts: list[str] = []
+    for para in root.iter(f"{{{W}}}p"):
+        text = "".join(t.text or "" for t in para.iter(f"{{{W}}}t")).strip()
+        if text:
+            parts.append(text)
+
+    combined = "\n".join(parts)
+    return normalize_text(combined), 1, {"method": "docx_zip_fallback"}
 
 
 def _iter_docx_blocks(doc: Document):

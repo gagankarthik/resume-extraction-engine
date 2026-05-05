@@ -24,4 +24,6 @@ class CertificationsAgent(BaseAgent):
         user_msg = f"=== RESUME ===\n{text}\n=== END ===\n\nExtract certifications. Return JSON."
         raw, _ = await self._call_llm(CERT_SYSTEM, user_msg, max_tokens=2048)
         result = self._parse_json(raw)
+        if isinstance(result, list):
+            return result
         return result.get("certifications", [])

@@ -149,6 +149,10 @@ class WorkExperienceAgent(BaseAgent):
         raw, _ = await self._call_llm(system, user_msg, max_tokens=4096)
         result = self._parse_json(raw)
 
+        # Handle bare JSON array (LLM skipped the wrapper object)
+        if isinstance(result, list):
+            return result[0] if result else {}
+
         # Handle both wrapped and unwrapped responses
         if "work_experience" in result and isinstance(result["work_experience"], list):
             result = result["work_experience"][0] if result["work_experience"] else {}
@@ -170,4 +174,6 @@ class WorkExperienceAgent(BaseAgent):
         user_msg = f"=== RESUME TEXT ===\n{text}\n=== END ===\n\nExtract all work experience. Return only JSON."
         raw, _ = await self._call_llm(WORK_SYSTEM_FULL_FALLBACK, user_msg, max_tokens=8192)
         result = self._parse_json(raw)
+        if isinstance(result, list):
+            return result
         return result.get("work_experience", [])
