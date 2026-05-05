@@ -2,7 +2,6 @@ import os
 import uvicorn
 from pathlib import Path
 from fastapi import FastAPI, File, Query, UploadFile, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
 
@@ -18,14 +17,6 @@ app = FastAPI(
         "and receive a fully structured JSON with every detail extracted."
     ),
     version="2.0.0",
-)
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
 )
 
 MAX_FILE_BYTES = int(os.getenv("MAX_FILE_SIZE_MB", "20")) * 1024 * 1024
