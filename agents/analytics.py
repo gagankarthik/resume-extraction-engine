@@ -6,8 +6,7 @@ from __future__ import annotations
 
 import re
 import logging
-from datetime import date, datetime
-from typing import Any
+from datetime import date
 
 from .base import BaseAgent
 
@@ -83,7 +82,6 @@ class AnalyticsAgent(BaseAgent):
         edu = merged.get("education", [])
 
         # Compute numeric fields in Python (deterministic)
-        tenures = [_tenure_months(j.get("start_date"), j.get("end_date")) for j in work]
         total_months = self._non_overlapping_months(work)
         total_years = round(total_months / 12, 1)
         num_companies = len({j.get("company_name", "") for j in work if j.get("company_name")})

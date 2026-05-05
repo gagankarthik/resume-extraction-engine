@@ -4,9 +4,7 @@ Programmatically counts bullets per job segment (never trusts LLM for counts).
 """
 from __future__ import annotations
 
-import re
 import logging
-from typing import Any
 
 from .base import BaseAgent
 

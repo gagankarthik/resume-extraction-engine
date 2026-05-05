@@ -441,7 +441,6 @@ async def _call_openai(user_message: str) -> tuple[str, dict]:
 
 
 async def _call_anthropic(user_message: str) -> tuple[str, dict]:
-    import anthropic as _anthropic
     model = os.getenv("ANTHROPIC_MODEL", "claude-opus-4-7")
     client = _get_anthropic()
 
