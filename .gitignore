@@ -1,10 +1,10 @@
-# Environment
+# ── Secrets ───────────────────────────────────────────────────────────────────
 .env
 .env.*
 !.env.example
-.env.example
+# NOTE: removed the stale ".env.example" line that was re-ignoring the template
 
-# Python
+# ── Python ────────────────────────────────────────────────────────────────────
 __pycache__/
 *.py[cod]
 *.pyo
@@ -19,14 +19,32 @@ build/
 pip-wheel-metadata/
 MANIFEST
 
-# Virtual environments
+# ── Virtual environments ───────────────────────────────────────────────────────
 .venv/
 venv/
 env/
 ENV/
 .virtualenv/
 
-# IDE
+# ── Lambda build artifacts ─────────────────────────────────────────────────────
+lambda.zip
+package/
+
+# ── Terraform ─────────────────────────────────────────────────────────────────
+terraform/.terraform/
+terraform/tfplan
+terraform/*.tfstate
+terraform/*.tfstate.backup
+terraform/*.tfvars
+# .terraform.lock.hcl is intentionally committed for reproducible provider versions
+
+# ── Testing ───────────────────────────────────────────────────────────────────
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# ── IDE ───────────────────────────────────────────────────────────────────────
 .vscode/
 .idea/
 *.suo
@@ -34,24 +52,18 @@ ENV/
 *.njsproj
 *.sln
 *.sw?
+
+# ── OS ────────────────────────────────────────────────────────────────────────
 .DS_Store
 Thumbs.db
 
-# Testing
-.pytest_cache/
-.coverage
-htmlcov/
-.tox/
-
-# Logs and temp files
+# ── Logs and temp files ───────────────────────────────────────────────────────
 *.log
 *.tmp
 *.bak
 uploads/
 output/
-
 samples/
 
-
-# Claude Code
+# ── Claude Code ───────────────────────────────────────────────────────────────
 .claude/settings.local.json
