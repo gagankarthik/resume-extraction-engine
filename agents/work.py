@@ -30,7 +30,7 @@ Extract into this JSON shape:
   "responsibilities": ["bullet 1", "bullet 2", ...],
   "achievements": ["measurable outcome 1", ...],
   "technologies_used": ["tech1", "tech2", ...],
-  "description": "short prose description or null",
+  "description": "one brief sentence describing the role context only — NOT job duties",
   "projects": [
     {{
       "projectName": "project name",
@@ -45,18 +45,23 @@ Extract into this JSON shape:
 Rules:
 - Copy every responsibility VERBATIM — do not paraphrase, summarize, or merge.
 - Strip the leading bullet character (•) from each entry.
+- If the job uses PROSE paragraphs (no explicit bullets): split each sentence into an individual item in responsibilities[]. Do NOT put job duties into description.
+- NEVER leave responsibilities[] empty — every job must have at least one entry.
 - If this job uses a consulting sub-project structure, place individual project bullets inside the projects[] array.
 - achievements[] should contain ONLY items with measurable results (%, $, headcount, time saved, etc.).
 - technologies_used[] = every tool/language/platform mentioned in this job.
 - Return ONLY valid JSON.
 """
 
-WORK_SYSTEM_FULL_FALLBACK = """You are a work experience extraction specialist. Extract ALL work experience entries from the resume.
+WORK_SYSTEM_FULL_FALLBACK = """You are a work experience extraction specialist. Extract ALL work experience entries from the resume. This is a long-career resume — include EVERY job, even old ones from 15-25 years ago.
 
 CRITICAL RULES:
-1. NEVER skip or add bullet points. Extract EXACTLY the bullets that exist.
-2. Copy all responsibilities VERBATIM — do not paraphrase or merge.
-3. If a person worked on sub-projects under one company, structure them in projects[].
+1. Include EVERY job entry — do not skip any role, even old ones.
+2. NEVER skip or add bullet points. Extract EXACTLY the bullets that exist.
+3. Copy all responsibilities VERBATIM — do not paraphrase or merge.
+4. If the job uses PROSE paragraphs (no bullet points): split each sentence into a separate item in responsibilities[]. Do NOT use the description field for job duties.
+5. NEVER leave responsibilities[] empty — every job must have at least one entry.
+6. If a person worked on sub-projects under one company, structure them in projects[].
 
 Return a JSON object: {{ "work_experience": [ <job objects> ] }}
 
@@ -82,25 +87,50 @@ class WorkExperienceAgent(BaseAgent):
         """
         Extract work experience using per-job extraction with exact bullet counts.
         Falls back to full-document extraction if structure is empty.
+        Preserves document order; retries any job that failed on the first pass.
         """
         jobs_meta = structure.get("jobs", [])
 
         if not jobs_meta:
             return await self._extract_full_document(text)
 
-        # Run per-job extraction in parallel
-        tasks = [self._extract_single_job(text, meta) for meta in jobs_meta]
-        results = await asyncio.gather(*tasks, return_exceptions=True)
+        # First pass: all jobs in parallel
+        first_pass = await asyncio.gather(
+            *[self._extract_single_job(text, meta) for meta in jobs_meta],
+            return_exceptions=True,
+        )
 
-        extracted = []
-        for i, res in enumerate(results):
+        # Collect results and identify failures
+        results: list[dict | None] = [None] * len(jobs_meta)
+        retry_indices: list[int] = []
+
+        for i, res in enumerate(first_pass):
             if isinstance(res, Exception):
-                logger.warning("[WorkExperienceAgent] Job %d extraction failed: %s", i, res)
-                # Fall through — the validator will flag this as missing
+                logger.warning(
+                    "[WorkExperienceAgent] Job %d (%s) failed — will retry: %s",
+                    i, jobs_meta[i].get("company", "?"), res,
+                )
+                retry_indices.append(i)
             else:
-                extracted.append(res)
+                results[i] = res
 
-        return extracted
+        # Retry pass for any failures
+        if retry_indices:
+            logger.info("[WorkExperienceAgent] Retrying %d failed job(s)", len(retry_indices))
+            retry_pass = await asyncio.gather(
+                *[self._extract_single_job(text, jobs_meta[i]) for i in retry_indices],
+                return_exceptions=True,
+            )
+            for idx, res in zip(retry_indices, retry_pass):
+                if isinstance(res, Exception):
+                    logger.error(
+                        "[WorkExperienceAgent] Job %d (%s) permanently failed after retry: %s",
+                        idx, jobs_meta[idx].get("company", "?"), res,
+                    )
+                else:
+                    results[idx] = res
+
+        return [r for r in results if r is not None]
 
     # ------------------------------------------------------------------ #
     # Per-job extraction
@@ -123,8 +153,11 @@ class WorkExperienceAgent(BaseAgent):
             )
         else:
             bullet_instruction = (
-                f"Extract all bullet points and responsibilities you find for {company}. "
-                "Copy them verbatim without paraphrasing."
+                f"Extract ALL responsibilities for {company} into the responsibilities[] array. "
+                "If the job uses explicit bullet points (•, -, *, numbers): copy each bullet verbatim as a separate array item. "
+                "If the job uses PROSE paragraphs instead of bullets: split every sentence into an individual item in responsibilities[]. "
+                "Do NOT put job duties into the description field. "
+                "NEVER leave responsibilities[] empty — every job must have at least one entry."
             )
 
         if has_projects:
@@ -146,7 +179,7 @@ class WorkExperienceAgent(BaseAgent):
             "Return ONLY the JSON for this single job entry."
         )
 
-        raw, _ = await self._call_llm(system, user_msg, max_tokens=4096)
+        raw, _ = await self._call_llm(system, user_msg, max_tokens=6144)
         result = self._parse_json(raw)
 
         # Handle bare JSON array (LLM skipped the wrapper object)
@@ -172,7 +205,7 @@ class WorkExperienceAgent(BaseAgent):
     async def _extract_full_document(self, text: str) -> list[dict]:
         logger.info("[WorkExperienceAgent] No structure map — falling back to full-document extraction")
         user_msg = f"=== RESUME TEXT ===\n{text}\n=== END ===\n\nExtract all work experience. Return only JSON."
-        raw, _ = await self._call_llm(WORK_SYSTEM_FULL_FALLBACK, user_msg, max_tokens=8192)
+        raw, _ = await self._call_llm(WORK_SYSTEM_FULL_FALLBACK, user_msg, max_tokens=16384)
         result = self._parse_json(raw)
         if isinstance(result, list):
             return result

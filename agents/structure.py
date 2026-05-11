@@ -5,12 +5,15 @@ Programmatically counts bullets per job segment (never trusts LLM for counts).
 from __future__ import annotations
 
 import logging
+import re
 
 from .base import BaseAgent
 
 logger = logging.getLogger(__name__)
 
-STRUCTURE_SYSTEM = """You are a resume structure analyzer. Your ONLY job is to identify all work experience job entries in the resume text and locate their boundaries.
+STRUCTURE_SYSTEM = """You are a resume structure analyzer. Your ONLY job is to identify ALL work experience job entries in the resume text.
+
+CRITICAL: You MUST find EVERY single job entry — no matter how many. Long careers of 15–25+ years may have 10–20 or more jobs. Do NOT stop early. Scan the ENTIRE document from top to bottom.
 
 Return a JSON object with this exact shape:
 {
@@ -21,16 +24,18 @@ Return a JSON object with this exact shape:
       "start_date": "as written",
       "end_date": "as written or 'Present'",
       "location": "city/state if present or null",
-      "anchor_line": "the EXACT first line of text where this job begins (copy verbatim)",
+      "anchor_line": "the EXACT first line of text where this job begins — copy it character-for-character verbatim",
       "has_sub_projects": true/false
     }
   ]
 }
 
 Rules:
-- List jobs in ORDER as they appear in the resume (top to bottom).
-- anchor_line must be the EXACT verbatim text of the first line of the job section (usually company name).
-- Set has_sub_projects to true if the job contains labelled sub-projects or clients (consulting pattern).
+- List EVERY job in ORDER as they appear in the resume (top to bottom), including old roles from 20-25 years ago.
+- anchor_line MUST be the exact verbatim text of the very first line of the job entry (usually the company name line). Copy it character-for-character — no paraphrasing.
+- If the resume has an "ORGANISATIONAL SCAN" or compact job-list section, list every company/role in that section.
+- Set has_sub_projects to true if the job contains labelled sub-projects, client engagements, or consulting assignments.
+- Include ALL positions: full-time, contract, consulting, part-time, internships.
 - Return ONLY the JSON, no other text.
 """
 
@@ -61,7 +66,7 @@ class StructureAgent(BaseAgent):
         """
         user_msg = f"=== RESUME TEXT ===\n{text}\n=== END ==="
         try:
-            raw, _ = await self._call_llm(STRUCTURE_SYSTEM, user_msg, max_tokens=4096)
+            raw, _ = await self._call_llm(STRUCTURE_SYSTEM, user_msg, max_tokens=8192)
             result = self._parse_json(raw)
             jobs = result.get("jobs", [])
         except Exception as exc:
@@ -112,17 +117,34 @@ class StructureAgent(BaseAgent):
 
     @staticmethod
     def _find_anchor_line(lines: list[str], anchor: str) -> int | None:
-        anchor_lower = anchor.lower()
-        # Exact match first
+        anchor_lower = anchor.strip().lower()
+        # Pass 1: exact match
         for i, line in enumerate(lines):
             if line.strip().lower() == anchor_lower:
                 return i
-        # Substring match
+        # Pass 2: line starts with anchor (line has trailing date/location after company name)
+        for i, line in enumerate(lines):
+            if line.strip().lower().startswith(anchor_lower):
+                return i
+        # Pass 3: anchor starts with the full line (anchor has more context than the actual line)
+        # Only trigger when the line is at least 6 chars to prevent false positives on short words.
+        for i, line in enumerate(lines):
+            stripped = line.strip().lower()
+            if len(stripped) >= 6 and anchor_lower.startswith(stripped):
+                return i
+        # Pass 4: substring match (last resort)
         for i, line in enumerate(lines):
             if anchor_lower in line.lower():
                 return i
         return None
 
-    @staticmethod
-    def _count_bullets(lines: list[str]) -> int:
-        return sum(1 for line in lines if line.strip().startswith("•"))
+    _NUMBERED_BULLET = re.compile(r"^\d+[\.\)]\s+\S")
+
+    @classmethod
+    def _count_bullets(cls, lines: list[str]) -> int:
+        count = 0
+        for line in lines:
+            stripped = line.strip()
+            if stripped.startswith("•") or cls._NUMBERED_BULLET.match(stripped):
+                count += 1
+        return count

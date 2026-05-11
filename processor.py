@@ -3,6 +3,7 @@ LLM processor — OpenAI (default) or Anthropic, switchable via MODEL_PROVIDER e
 The provider client is a module-level singleton so the connection pool is reused
 across all concurrent requests (important for multi-client production use).
 """
+import asyncio
 import os
 import json
 import uuid
@@ -502,10 +503,17 @@ async def process_resume(
 
     # ── Choose engine: multi-agent orchestrator (default) or single-shot ──
     use_orchestrator = os.getenv("USE_ORCHESTRATOR", "true").lower() in ("1", "true", "yes")
+    timeout_secs = int(os.getenv("EXTRACTION_TIMEOUT_SECONDS", "360"))
 
     if use_orchestrator:
         orchestrator = get_orchestrator()
-        extracted = await orchestrator.run(raw_text)
+        try:
+            extracted = await asyncio.wait_for(orchestrator.run(raw_text), timeout=timeout_secs)
+        except asyncio.TimeoutError:
+            raise ValueError(
+                f"Extraction timed out after {timeout_secs}s. "
+                "The resume may be unusually long — try splitting it or increasing EXTRACTION_TIMEOUT_SECONDS."
+            )
         llm_info = {"provider": "orchestrator", "model": "multi-agent"}
     else:
         provider = os.getenv("MODEL_PROVIDER", "openai").lower()

@@ -92,7 +92,7 @@ class ValidatorAgent(BaseAgent):
             f"{segment}\n"
             "=== END ==="
         )
-        raw, _ = await self._call_llm(system, user_msg, max_tokens=4096)
+        raw, _ = await self._call_llm(system, user_msg, max_tokens=6144)
         result = self._parse_json(raw)
 
         # Unwrap if needed

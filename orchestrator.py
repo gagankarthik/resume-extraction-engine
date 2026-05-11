@@ -1,7 +1,7 @@
 """
 ResumeOrchestrator — multi-agent pipeline for best-in-class resume extraction.
 
-Stage 1 (sequential):  StructureAgent   → identifies job boundaries, counts bullets
+Stage 1 (sequential):  StructureAgent   → identifies ALL job boundaries, counts bullets
 Stage 2 (parallel):    PersonalAgent, WorkAgent, EducationAgent, SkillsAgent,
                        CertificationsAgent, SupplementalAgent
 Stage 3 (sequential):  AnalyticsAgent   → computes analytics from merged data
@@ -26,6 +26,14 @@ from agents.validator_agent import ValidatorAgent
 logger = logging.getLogger(__name__)
 
 
+def _unwrap(result: Any, default: Any, agent_name: str) -> Any:
+    """Return default and log a warning if result is an Exception."""
+    if isinstance(result, Exception):
+        logger.warning("[Orchestrator] %s failed: %s", agent_name, result)
+        return default
+    return result
+
+
 class ResumeOrchestrator:
 
     def __init__(self):
@@ -43,41 +51,57 @@ class ResumeOrchestrator:
         # ── Stage 1: Structure discovery ──────────────────────────────────
         logger.info("[Orchestrator] Stage 1 — structure discovery")
         structure = await self.structure_agent.run(normalized_text)
-        logger.info(
-            "[Orchestrator] Found %d job(s) in structure map",
-            len(structure.get("jobs", [])),
-        )
+        job_count = len(structure.get("jobs", []))
+        logger.info("[Orchestrator] Found %d job(s) in structure map", job_count)
 
         # ── Stage 2: Parallel section extraction ──────────────────────────
         logger.info("[Orchestrator] Stage 2 — parallel extraction")
-        (
-            personal_result,
-            work_result,
-            edu_result,
-            skills_result,
-            cert_result,
-            supp_result,
-        ) = await asyncio.gather(
+        raw_results = await asyncio.gather(
             self.personal_agent.run(normalized_text),
             self.work_agent.run(normalized_text, structure),
             self.education_agent.run(normalized_text),
             self.skills_agent.run(normalized_text),
             self.cert_agent.run(normalized_text),
             self.supp_agent.run(normalized_text),
-            return_exceptions=False,
+            return_exceptions=True,  # never let one agent failure kill all results
         )
+
+        personal_raw  = _unwrap(raw_results[0], {}, "PersonalInfoAgent")
+        work_result   = _unwrap(raw_results[1], [], "WorkExperienceAgent")
+        edu_result    = _unwrap(raw_results[2], [], "EducationAgent")
+        skills_result = _unwrap(raw_results[3], {}, "SkillsAgent")
+        cert_result   = _unwrap(raw_results[4], [], "CertificationsAgent")
+        supp_result   = _unwrap(raw_results[5], {}, "SupplementalAgent")
+
+        # PersonalInfoAgent now returns {"personal_information": {...}, "professional_summary": ..., "objective": ...}
+        personal_info = personal_raw.get("personal_information", personal_raw) if isinstance(personal_raw, dict) else {}
+        summary_from_personal   = personal_raw.get("professional_summary") if isinstance(personal_raw, dict) else None
+        objective_from_personal = personal_raw.get("objective")            if isinstance(personal_raw, dict) else None
 
         # ── Merge results ──────────────────────────────────────────────────
         merged: dict[str, Any] = {
-            "personal_information": personal_result,
-            "work_experience":      work_result,
-            "education":            edu_result,
-            "skills":               skills_result,
-            "certifications":       cert_result,
+            "personal_information": personal_info,
+            "work_experience":      work_result   if isinstance(work_result, list)   else [],
+            "education":            edu_result    if isinstance(edu_result, list)    else [],
+            "skills":               skills_result if isinstance(skills_result, dict) else {},
+            "certifications":       cert_result   if isinstance(cert_result, list)   else [],
         }
-        # Supplemental agent returns a dict with many top-level keys
+
+        # Seed summary/objective from PersonalInfoAgent (guaranteed fast extraction)
+        if summary_from_personal:
+            merged["professional_summary"] = summary_from_personal
+        if objective_from_personal:
+            merged["objective"] = objective_from_personal
+
+        # Merge supplemental — only overwrite with non-null/non-empty values so a
+        # truncated SupplementalAgent response never wipes out the summary we already have.
         if isinstance(supp_result, dict):
-            merged.update(supp_result)
+            for key, val in supp_result.items():
+                existing = merged.get(key)
+                has_content = val is not None and val != [] and val != {}
+                existing_empty = existing is None or existing == [] or existing == {}
+                if has_content or existing_empty:
+                    merged[key] = val
 
         # ── Stage 3: Analytics ────────────────────────────────────────────
         logger.info("[Orchestrator] Stage 3 — analytics")
@@ -94,6 +118,14 @@ class ResumeOrchestrator:
             merged = await self.validator_agent.run(merged, normalized_text, structure)
         except Exception as exc:
             logger.warning("[Orchestrator] Validation pass failed: %s", exc)
+
+        # Final sanity log
+        we = merged.get("work_experience", [])
+        logger.info(
+            "[Orchestrator] Final result: %d job(s), summary=%s",
+            len(we),
+            "present" if merged.get("professional_summary") else "absent",
+        )
 
         return merged
 

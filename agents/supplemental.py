@@ -38,5 +38,5 @@ class SupplementalAgent(BaseAgent):
 
     async def run(self, text: str) -> dict:
         user_msg = f"=== RESUME ===\n{text}\n=== END ===\n\nExtract all supplemental sections. Return JSON."
-        raw, _ = await self._call_llm(SUPP_SYSTEM, user_msg, max_tokens=6144)
+        raw, _ = await self._call_llm(SUPP_SYSTEM, user_msg, max_tokens=10240)
         return self._parse_json(raw)

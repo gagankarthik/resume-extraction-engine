@@ -113,7 +113,7 @@ class AnalyticsAgent(BaseAgent):
     async def _classify(self, work: list[dict], edu: list[dict]) -> dict:
         work_summary = "\n".join(
             f"- {j.get('company_name', '')} | {j.get('job_title', '')} | {j.get('start_date', '')}–{j.get('end_date', '')}"
-            for j in work[:10]
+            for j in work
         )
         edu_summary = "\n".join(
             f"- {e.get('degree', '')} in {e.get('field_of_study', '')} from {e.get('institution_name', '')}"
