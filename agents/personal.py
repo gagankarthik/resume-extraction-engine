@@ -28,7 +28,8 @@ Return ONLY this JSON:
 Rules for professional_summary:
 - Extract the full text of any section labelled "Summary", "Professional Summary", "Profile", "About Me", "Career Summary", "Executive Summary", "Overview", or similar.
 - Copy it verbatim — do not paraphrase or shorten.
-- If the summary is written as multiple bullet points, join them into a single string separated by " | ".
+- PRESERVE bullet structure. If the summary is written as multiple bullet points (lines starting with •, -, *, or visually separated points), return them as a single string with each bullet on its OWN LINE, each line prefixed with "• ". Do NOT merge them into one paragraph and do NOT use " | " or any other inline separator.
+- If the summary is a single flowing paragraph (no bullets in the source), return it as-is — do not artificially split it.
 - If no summary section exists, return null.
 
 Rules for objective:
