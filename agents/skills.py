@@ -6,7 +6,9 @@ SKILLS_SYSTEM = """Extract ONLY skills that are explicitly named in the resume. 
 
 A skill is a named technology, tool, platform, language, framework, methodology, or concept that appears verbatim (or near-verbatim) in the resume. Job duties, action verbs, and activity phrases are NOT skills.
 
-Categorize:
+You will produce TWO views of the same skills inventory:
+
+(A) NORMALIZED CATEGORIES — fixed taxonomy, every skill placed into the best-fit bucket:
 - programming_languages: e.g. Python, Java, C#, SQL, R, JavaScript, TypeScript
 - frameworks_and_libraries: e.g. React, Django, Spring Boot, TensorFlow, .NET, FastAPI
 - databases: e.g. Oracle, SQL Server, PostgreSQL, MongoDB, MySQL, Redshift
@@ -21,6 +23,13 @@ Categorize:
 - all_skills_raw: deduplicated union of all categories above
 - technical_skills: deduplicated union of programming_languages through design_skills
 
+(B) VERBATIM CATEGORIES — preserve the resume's own section labels:
+- If the resume's skills/technical-skills section uses its OWN category labels (e.g. "Cloud Datawarehouse", "Data Modeling Tool", "ETL Tool", "Big Data Technology"), copy each label and its skills VERBATIM into the `categories` array.
+- Use the EXACT label text from the resume (case, punctuation, ampersands, parentheses) — do NOT normalize, expand, or rename.
+- Preserve the resume's ORDER of categories.
+- If the resume uses a single flat list with NO category labels, leave `categories` as an empty array.
+- A skill may appear in BOTH normalized categories AND verbatim categories — the views are independent.
+
 Return ONLY this JSON:
 {
   "skills": {
@@ -28,7 +37,10 @@ Return ONLY this JSON:
     "programming_languages": [], "frameworks_and_libraries": [], "databases": [],
     "cloud_platforms": [], "tools_and_platforms": [], "operating_systems": [],
     "methodologies": [], "domain_skills": [], "design_skills": [],
-    "languages_spoken": [], "other_skills": []
+    "languages_spoken": [], "other_skills": [],
+    "categories": [
+      { "name": "<verbatim label from resume>", "skills": ["skill1", "skill2"] }
+    ]
   }
 }
 """

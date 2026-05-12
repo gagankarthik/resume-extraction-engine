@@ -210,6 +210,22 @@ class EducationItem(_Base):
 # skills
 # ---------------------------------------------------------------------------
 
+class SkillCategoryItem(_Base):
+    """Verbatim skill section from the resume — preserves the candidate's own label."""
+    name: Optional[str] = None
+    skills: list[str] = Field(default_factory=list)
+
+    @model_validator(mode="before")
+    @classmethod
+    def _coerce(cls, d: Any) -> Any:
+        if not isinstance(d, dict):
+            return {}
+        return {
+            "name": _str(d.get("name") or d.get("label") or d.get("category")),
+            "skills": _str_list(d.get("skills") or d.get("items") or d.get("values")),
+        }
+
+
 class SkillsModel(_Base):
     all_skills_raw: list[str] = Field(default_factory=list)
     technical_skills: list[str] = Field(default_factory=list)
@@ -225,13 +241,23 @@ class SkillsModel(_Base):
     design_skills: list[str] = Field(default_factory=list)
     languages_spoken: list[str] = Field(default_factory=list)
     other_skills: list[str] = Field(default_factory=list)
+    # Verbatim categories preserve the resume's own section labels.
+    # Frontend prefers these over the normalized fields above when populated.
+    categories: list[SkillCategoryItem] = Field(default_factory=list)
 
     @model_validator(mode="before")
     @classmethod
     def _coerce(cls, d: Any) -> Any:
         if not isinstance(d, dict):
             return {}
-        return {k: _str_list(v) for k, v in d.items()}
+        out: dict[str, Any] = {}
+        for k, v in d.items():
+            if k == "categories":
+                # Pass list-of-dicts through untouched; SkillCategoryItem will coerce.
+                out[k] = v if isinstance(v, list) else []
+            else:
+                out[k] = _str_list(v)
+        return out
 
 
 # ---------------------------------------------------------------------------

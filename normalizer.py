@@ -35,11 +35,35 @@ _CHAR_MAP = {
     "✓": "•",  # check mark → bullet
     "✔": "•",
     "➤": "•",
+    # Private-Use-Area glyphs commonly emitted by Wingdings / Symbol fonts in PDFs
+    "": "•",   # Wingdings bullet
+    "": "•",   # Wingdings v
+    "": "•",   # Wingdings square
+    "": "•",   # Wingdings diamond
+    "": "•",   # Wingdings arrow
+    "": "•",   # Wingdings check
+    "": "•",   # Wingdings X-mark
+    "": "•",
 }
 
 # Patterns for bullet characters at line start
 _BULLET_PATTERN = re.compile(
     r"^[ \t]*[•●▪▸►‣⁃⁌∙◦✓✔➤‧⦿⦾―‖\*\-\+\>\~][ \t]+",
+    re.MULTILINE,
+)
+
+# Orphan bullet glyph alone on its own line — a common PDF-extraction artifact
+# where the glyph is rendered as a separate text run. Example:
+#
+#   •
+#   Leading data architecture initiatives...
+#
+# Without this fix, the glyph stays orphaned and the following line is treated
+# as a continuation line that won't merge (because it starts with a capital
+# letter), so the LLM sees a single uncategorized sentence per job rather than
+# a list of bullets.
+_ORPHAN_BULLET = re.compile(
+    r"^[ \t]*([•●▪▸►‣⁃⁌∙◦✓✔➤‧⦿⦾])[ \t]*\n[ \t]*(?=\S)",
     re.MULTILINE,
 )
 
@@ -83,7 +107,15 @@ def normalize_text(text: str) -> str:
     # 4. Fix hyphenated line breaks (must run before line merging)
     text = _HYPHEN_BREAK.sub(lambda m: m.group(1) + m.group(2), text)
 
-    # 5. Normalize bullet characters at line start to "• "
+    # 5a. Re-attach orphan bullet glyphs to their text line. Run BEFORE bullet
+    # normalization so the joined "• text" line matches _BULLET_PATTERN.
+    # Iterate to collapse cascading orphans (e.g. two glyphs stacked above text).
+    prev = None
+    while prev != text:
+        prev = text
+        text = _ORPHAN_BULLET.sub(r"\1 ", text)
+
+    # 5b. Normalize bullet characters at line start to "• "
     text = _BULLET_PATTERN.sub("• ", text)
 
     # 6. Remove standalone page number lines

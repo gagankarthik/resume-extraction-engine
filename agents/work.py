@@ -44,9 +44,11 @@ Extract into this JSON shape:
 
 Rules:
 - Copy every responsibility VERBATIM — do not paraphrase, summarize, or merge.
-- Strip the leading bullet character (•) from each entry.
+- Strip leading bullet glyphs (•, ●, ▪, ▸, ‣, ○, ◦, ►, -, *, –, —) from each entry.
+- Bullets may be marked by ANY of these glyphs, by numbered lists (1., 1)), or by no glyph at all (prose).
 - If the job uses PROSE paragraphs (no explicit bullets): split each sentence into an individual item in responsibilities[]. Do NOT put job duties into description.
-- NEVER leave responsibilities[] empty — every job must have at least one entry.
+- Treat ANY narrative duty/action text in the segment as bullet content — even if it isn't formatted as a bulleted list. Past-tense action verbs (Designed, Led, Built, Managed, Migrated, Implemented, …) are duty signals; capture each as its own responsibility.
+- NEVER leave responsibilities[] empty if the segment contains ANY duty/narrative text — every such job must have at least one entry. Only leave it empty if the segment is truly metadata-only (company/date/title/location/tech list with NO action sentences).
 - If this job uses a consulting sub-project structure, place individual project bullets inside the projects[] array.
 - achievements[] should contain ONLY items with measurable results (%, $, headcount, time saved, etc.).
 - technologies_used[] = every tool/language/platform mentioned in this job.
@@ -59,9 +61,10 @@ CRITICAL RULES:
 1. Include EVERY job entry — do not skip any role, even old ones.
 2. NEVER skip or add bullet points. Extract EXACTLY the bullets that exist.
 3. Copy all responsibilities VERBATIM — do not paraphrase or merge.
-4. If the job uses PROSE paragraphs (no bullet points): split each sentence into a separate item in responsibilities[]. Do NOT use the description field for job duties.
-5. NEVER leave responsibilities[] empty — every job must have at least one entry.
-6. If a person worked on sub-projects under one company, structure them in projects[].
+4. Bullets may be marked by ANY glyph (•, ●, ▪, ▸, ‣, ○, ◦, ►, -, *, –, —), numbered (1., 1)), or no glyph at all (prose). Treat them all as bullets.
+5. If the job uses PROSE paragraphs (no bullet points): split each sentence into a separate item in responsibilities[]. Do NOT use the description field for job duties.
+6. NEVER leave responsibilities[] empty if the job segment has ANY duty/narrative text — every such job must have at least one entry. Only leave it empty if the segment is truly metadata-only (company/date/title/location/tech list).
+7. If a person worked on sub-projects under one company, structure them in projects[].
 
 Return a JSON object: {{ "work_experience": [ <job objects> ] }}
 

@@ -139,12 +139,19 @@ class StructureAgent(BaseAgent):
         return None
 
     _NUMBERED_BULLET = re.compile(r"^\d+[\.\)]\s+\S")
+    # Glyph and ASCII bullets the resume might use — broader than just "•".
+    _BULLET_GLYPH = re.compile(r"^[•●▪▸‣○◦►◘■□◙*\-–—]\s+\S")
 
     @classmethod
     def _count_bullets(cls, lines: list[str]) -> int:
         count = 0
         for line in lines:
             stripped = line.strip()
-            if stripped.startswith("•") or cls._NUMBERED_BULLET.match(stripped):
+            if not stripped:
+                continue
+            if (
+                cls._BULLET_GLYPH.match(stripped)
+                or cls._NUMBERED_BULLET.match(stripped)
+            ):
                 count += 1
         return count
