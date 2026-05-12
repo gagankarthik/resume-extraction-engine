@@ -158,8 +158,37 @@ class WorkExperienceItem(_Base):
                 out[k] = _bool(v)
             elif k == "team_size":
                 out[k] = _int(v)
+            elif isinstance(v, (list, dict)):
+                # Preserve nested structures (projects[], subsections[], etc.)
+                # CRITICAL: do NOT stringify — that's what was producing
+                # "projects": "[{'projectName': ...}]" Python-repr blobs.
+                out[k] = v
             else:
                 out[k] = _str(v)
+
+        # If the LLM mis-detected "sub-projects" and stuffed all duty bullets into
+        # projects[].projectResponsibilities while leaving responsibilities[] empty,
+        # flatten them back. Real per-project bullets are flat duty lines, not
+        # discrete consulting engagements.
+        projects = out.get("projects")
+        resps = out.get("responsibilities") or []
+        if not resps and isinstance(projects, list) and projects:
+            # Heuristic: if every "project" has at most ONE projectResponsibility,
+            # this isn't a real consulting structure — it's just bullets that the
+            # LLM split into pseudo-projects. Flatten back.
+            singleton_count = sum(
+                1 for p in projects
+                if isinstance(p, dict) and len(p.get("projectResponsibilities") or []) <= 1
+            )
+            if projects and singleton_count >= max(1, len(projects) // 2):
+                flat: list[str] = []
+                for p in projects:
+                    if isinstance(p, dict):
+                        flat.extend(p.get("projectResponsibilities") or [])
+                if flat:
+                    out["responsibilities"] = [str(x).strip() for x in flat if x and str(x).strip()]
+                    out["projects"] = []
+
         return out
 
 

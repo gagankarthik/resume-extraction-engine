@@ -49,7 +49,11 @@ Rules:
 - If the job uses PROSE paragraphs (no explicit bullets): split each sentence into an individual item in responsibilities[]. Do NOT put job duties into description.
 - Treat ANY narrative duty/action text in the segment as bullet content — even if it isn't formatted as a bulleted list. Past-tense action verbs (Designed, Led, Built, Managed, Migrated, Implemented, …) are duty signals; capture each as its own responsibility.
 - NEVER leave responsibilities[] empty if the segment contains ANY duty/narrative text — every such job must have at least one entry. Only leave it empty if the segment is truly metadata-only (company/date/title/location/tech list with NO action sentences).
-- If this job uses a consulting sub-project structure, place individual project bullets inside the projects[] array.
+- description should be NULL or a single short sentence describing the COMPANY/ROLE context only (e.g. "Healthcare insurer in California"). NEVER put duty bullets, action verbs, or summary sentences into description — those belong in responsibilities[].
+- projects[] rules (BE STRICT):
+  • Use projects[] ONLY when the source resume EXPLICITLY labels sub-projects with their own headings (e.g. "Project 1: <Name>" or a discrete project name on its own line followed by its own bullet list).
+  • DO NOT invent project names by grouping responsibilities by topic. A long flat list of bullets is NOT a multi-project structure — it's a single role's responsibilities. Put them all in responsibilities[].
+  • If you find yourself synthesizing project names from bullet content (e.g. "Lakehouse Architecture Design", "BigID Implementation"), STOP — those are responsibility topics, not labeled sub-projects. Put them as flat entries in responsibilities[].
 - achievements[] should contain ONLY items with measurable results (%, $, headcount, time saved, etc.).
 - technologies_used[] = every tool/language/platform mentioned in this job.
 - Return ONLY valid JSON.

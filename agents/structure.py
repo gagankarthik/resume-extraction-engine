@@ -34,7 +34,10 @@ Rules:
 - List EVERY job in ORDER as they appear in the resume (top to bottom), including old roles from 20-25 years ago.
 - anchor_line MUST be the exact verbatim text of the very first line of the job entry (usually the company name line). Copy it character-for-character — no paraphrasing.
 - If the resume has an "ORGANISATIONAL SCAN" or compact job-list section, list every company/role in that section.
-- Set has_sub_projects to true if the job contains labelled sub-projects, client engagements, or consulting assignments.
+- has_sub_projects rules (BE STRICT):
+  • Set TRUE ONLY if the job ALREADY has clearly LABELED sub-projects in the source — meaning each sub-project has its own explicit heading like "Project 1: <Name>", "Engagement: <Client>", or a discrete project name on its own line followed by its own bullet list.
+  • Set FALSE if the job has a single flat "Responsibilities:" section followed by bullet points — even if there are many bullets covering many topics. A long flat list of responsibilities is NOT a sub-project structure.
+  • When in doubt, set FALSE. A wrong TRUE causes responsibilities to be split into invented project names; a wrong FALSE keeps them as a flat list (which renders correctly either way).
 - Include ALL positions: full-time, contract, consulting, part-time, internships.
 - Return ONLY the JSON, no other text.
 """

@@ -18,6 +18,37 @@ logger = logging.getLogger(__name__)
 _anthropic_client: Any = None
 _openai_client: Any = None
 
+# Global concurrency cap for in-flight LLM calls. Stage 2 fires ~6 top-level
+# agents in parallel and WorkExperienceAgent fires N per-job calls inside that —
+# without this, an 8-job 25-year resume hits ~14 concurrent calls and trips
+# the OpenAI 30K TPM ceiling on gpt-4o instantly. Default lowered to 2 so a
+# single Stage-2 burst stays under ~14K active tokens, leaving headroom for
+# WorkExperienceAgent's per-job retries. Configurable via env var.
+_LLM_CONCURRENCY = int(os.getenv("LLM_MAX_CONCURRENT", "2"))
+_llm_semaphore: asyncio.Semaphore | None = None
+
+
+def _get_semaphore() -> asyncio.Semaphore:
+    global _llm_semaphore
+    if _llm_semaphore is None:
+        _llm_semaphore = asyncio.Semaphore(_LLM_CONCURRENCY)
+    return _llm_semaphore
+
+
+# Parse the "Please try again in 704ms" hint from OpenAI 429 responses so we
+# wait exactly the prescribed duration instead of a fixed exponential backoff.
+_RETRY_HINT_RE = re.compile(r"try again in (\d+(?:\.\d+)?)\s*(ms|s|second|seconds)", re.IGNORECASE)
+
+
+def _parse_retry_after(exc: Exception) -> float | None:
+    msg = str(exc)
+    m = _RETRY_HINT_RE.search(msg)
+    if not m:
+        return None
+    value = float(m.group(1))
+    unit = m.group(2).lower()
+    return value / 1000.0 if unit == "ms" else value
+
 
 def _get_anthropic_client() -> Any:
     global _anthropic_client
@@ -68,20 +99,35 @@ class BaseAgent:
         json_mode: bool = True,
         max_tokens: int = 8192,
         temperature: float = 0,
-        retries: int = 2,
+        retries: int = 5,
     ) -> tuple[str, dict]:
         last_exc: Exception | None = None
+        sem = _get_semaphore()
         for attempt in range(retries + 1):
             try:
-                if self.provider == "anthropic":
-                    return await self._call_anthropic(system, user, max_tokens=max_tokens)
-                else:
-                    return await self._call_openai(system, user, json_mode=json_mode, max_tokens=max_tokens, temperature=temperature)
+                # Acquire the global semaphore so the whole pipeline can't exceed
+                # LLM_MAX_CONCURRENT concurrent in-flight calls.
+                async with sem:
+                    if self.provider == "anthropic":
+                        return await self._call_anthropic(system, user, max_tokens=max_tokens)
+                    else:
+                        return await self._call_openai(system, user, json_mode=json_mode, max_tokens=max_tokens, temperature=temperature)
             except Exception as exc:
                 last_exc = exc
                 if attempt < retries:
-                    wait = 2 ** attempt
-                    logger.warning("[%s] LLM attempt %d failed: %s — retrying in %ds", self.name, attempt + 1, exc, wait)
+                    # Respect the server's "try again in Xms/Xs" hint if present.
+                    # Fall back to exponential backoff capped at 30s otherwise.
+                    hinted = _parse_retry_after(exc)
+                    if hinted is not None:
+                        # Add a small jitter so retries from multiple in-flight
+                        # callers don't all wake simultaneously.
+                        wait = hinted + 0.1 * (attempt + 1)
+                    else:
+                        wait = min(30.0, 2 ** attempt)
+                    logger.warning(
+                        "[%s] LLM attempt %d failed: %s — retrying in %.2fs",
+                        self.name, attempt + 1, exc, wait,
+                    )
                     await asyncio.sleep(wait)
         raise RuntimeError(f"[{self.name}] All LLM attempts failed: {last_exc}") from last_exc
 

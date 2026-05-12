@@ -17,7 +17,13 @@ CRITICAL: This job segment contains EXACTLY {expected_count} bullet points.
 Extract all {expected_count} bullets verbatim into responsibilities[].
 DO NOT skip, merge, or add any bullet.
 
-Return ONLY the JSON for this single job entry (same schema as work_experience items).
+Also return ALL the other fields you can find in the segment — company_name, job_title,
+start_date, end_date, is_current, location, department, employment_type, duration,
+technologies_used, description, projects, achievements. Use the same schema as the
+work_experience items. Even if a field is unchanged from a prior extraction, return it
+so the caller can fall back to it. Leave any field you can't find as null or [].
+
+Return ONLY the JSON for this single job entry.
 """
 
 
@@ -51,10 +57,44 @@ class ValidatorAgent(BaseAgent):
         for (idx, _), result in zip(tasks, results):
             if isinstance(result, Exception):
                 logger.warning("[ValidatorAgent] Re-extraction failed for job %d: %s", idx, result)
-            elif result:
-                corrected_work[idx] = result
+                continue
+            if not result:
+                continue
+            # Merge: keep the original job's metadata as the floor, then overlay
+            # any non-empty field from the re-extraction. The re-extract prompt is
+            # bullet-focused; the LLM sometimes returns a sparse object without
+            # company_name/job_title/location, and replacing wholesale would erase
+            # good metadata from the first pass (the "Company / Role" placeholder bug).
+            corrected_work[idx] = self._merge_job(corrected_work[idx], result)
 
         merged["work_experience"] = corrected_work
+
+        # Final pass: drop any job whose bullet count STILL doesn't match the
+        # structure map. Showing a half-extracted job is worse than omitting it.
+        remaining_mismatches = self._find_bullet_mismatches(corrected_work, jobs_meta)
+        if remaining_mismatches:
+            drop_indices = {idx for idx, _ in remaining_mismatches}
+            for idx, meta in remaining_mismatches:
+                logger.warning(
+                    "[ValidatorAgent] Dropping %s — bullet count still mismatched after re-extraction",
+                    meta.get("company", f"job {idx}"),
+                )
+            merged["work_experience"] = [
+                job for i, job in enumerate(corrected_work) if i not in drop_indices
+            ]
+
+        return merged
+
+    @staticmethod
+    def _merge_job(original: dict, replacement: dict) -> dict:
+        """Overlay non-empty fields from `replacement` onto `original`."""
+        merged = dict(original)
+        for k, v in replacement.items():
+            # An empty string/list/dict/None from the re-extraction should not
+            # overwrite a populated value from the first pass.
+            if v is None or v == "" or v == [] or v == {}:
+                continue
+            merged[k] = v
         return merged
 
     # ------------------------------------------------------------------ #

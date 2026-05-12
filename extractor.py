@@ -147,6 +147,14 @@ def _extract_docx(file_bytes: bytes) -> ExtractionResult:
             is_heading = "heading" in style or "title" in style or (
                 text.isupper() and 2 < len(text) < 80
             )
+            # Word stores bullet/numbered list items as paragraphs with a <w:numPr>
+            # element but NO text glyph — the bullet is rendered from the numbering
+            # definition. Without re-introducing a glyph here, the normalizer and
+            # StructureAgent can't tell that "Designed and implemented X" was a
+            # bullet vs a free-floating paragraph, and bullet_count comes out 0.
+            # Prepend "• " so downstream regex bullet detection works.
+            if not is_heading and _is_list_paragraph(block):
+                text = f"• {text}"
             parts.append(("\n" + text) if is_heading else text)
 
         elif isinstance(block, DocxTable):
@@ -190,8 +198,14 @@ def _extract_docx_zip_fallback(file_bytes: bytes) -> ExtractionResult:
     parts: list[str] = []
     for para in root.iter(f"{{{W}}}p"):
         text = "".join(t.text or "" for t in para.iter(f"{{{W}}}t")).strip()
-        if text:
-            parts.append(text)
+        if not text:
+            continue
+        # Mirror the python-docx path: prepend "• " for paragraphs in a list.
+        pPr = para.find(f"{{{W}}}pPr")
+        is_list = pPr is not None and pPr.find(f"{{{W}}}numPr") is not None
+        if is_list:
+            text = f"• {text}"
+        parts.append(text)
 
     combined = "\n".join(parts)
     return normalize_text(combined), 1, {"method": "docx_zip_fallback"}
@@ -206,6 +220,19 @@ def _iter_docx_blocks(doc: Document):
             yield DocxParagraph(child, doc)
         elif child.tag == T_TAG:
             yield DocxTable(child, doc)
+
+
+def _is_list_paragraph(para: DocxParagraph) -> bool:
+    """True if this paragraph is part of a bulleted or numbered list in Word.
+
+    Detection is restricted to the presence of <w:numPr>, which is Word's
+    definitive list-membership signal. Style name alone (e.g. "ListParagraph")
+    is unreliable — Word applies it to plain indented prose too.
+    """
+    pPr = para._p.find(qn("w:pPr"))
+    if pPr is None:
+        return False
+    return pPr.find(qn("w:numPr")) is not None
 
 
 # ------------------------------------------------------------------ #

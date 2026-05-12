@@ -19,6 +19,11 @@ app = FastAPI(
     version="2.0.0",
 )
 
+# CORS for browser-based callers (Next.js dev server, deployed frontend).
+# The Lambda Function URL has its own CORS config in Terraform; this is for
+# when the frontend points at a local `uvicorn main:app` server.
+
+
 MAX_FILE_BYTES = int(os.getenv("MAX_FILE_SIZE_MB", "20")) * 1024 * 1024
 
 # Maps MIME type → internal file_type string for the extractor
