@@ -143,7 +143,7 @@ def _extract_docx(file_bytes: bytes) -> ExtractionResult:
             text = block.text.strip()
             if not text:
                 continue
-            style = (block.style.name or "").lower()
+            style = ((block.style.name if block.style else None) or "").lower()
             is_heading = "heading" in style or "title" in style or (
                 text.isupper() and 2 < len(text) < 80
             )

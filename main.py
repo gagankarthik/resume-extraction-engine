@@ -1,7 +1,9 @@
 import os
+import traceback
 import uvicorn
 from pathlib import Path
 from fastapi import FastAPI, File, Query, UploadFile, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
 
@@ -19,10 +21,12 @@ app = FastAPI(
     version="2.0.0",
 )
 
-# CORS for browser-based callers (Next.js dev server, deployed frontend).
-# The Lambda Function URL has its own CORS config in Terraform; this is for
-# when the frontend points at a local `uvicorn main:app` server.
-
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000", "http://10.0.0.47:3000"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 MAX_FILE_BYTES = int(os.getenv("MAX_FILE_SIZE_MB", "20")) * 1024 * 1024
 
@@ -111,6 +115,7 @@ async def extract_resume(
         # Tesseract not installed etc.
         raise HTTPException(status_code=422, detail=str(exc))
     except Exception as exc:
+        traceback.print_exc()
         raise HTTPException(status_code=422, detail=f"Text extraction failed: {exc}")
 
     if not raw_text.strip():
