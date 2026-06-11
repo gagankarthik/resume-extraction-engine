@@ -13,6 +13,7 @@ from dotenv import load_dotenv
 
 from validator import validate_resume_json
 from orchestrator import get_orchestrator
+from agents.base import reset_token_usage, get_token_usage
 
 load_dotenv(Path(__file__).parent / ".env", override=True)
 
@@ -415,7 +416,7 @@ REQUIRED JSON STRUCTURE:
 # ------------------------------------------------------------------ #
 
 async def _call_openai(user_message: str) -> tuple[str, dict]:
-    model = os.getenv("OPENAI_MODEL", "gpt-4o")
+    model = os.getenv("OPENAI_MODEL", "gpt-4.1-mini")
     client = _get_openai()
 
     response = await client.chat.completions.create(
@@ -507,6 +508,7 @@ async def process_resume(
 
     if use_orchestrator:
         orchestrator = get_orchestrator()
+        usage_acc = reset_token_usage()
         try:
             extracted = await asyncio.wait_for(orchestrator.run(raw_text), timeout=timeout_secs)
         except asyncio.TimeoutError:
@@ -514,7 +516,17 @@ async def process_resume(
                 f"Extraction timed out after {timeout_secs}s. "
                 "The resume may be unusually long — try splitting it or increasing EXTRACTION_TIMEOUT_SECONDS."
             )
-        llm_info = {"provider": "orchestrator", "model": "multi-agent"}
+        total = get_token_usage() or usage_acc
+        llm_info = {
+            "provider": "orchestrator",
+            "model": os.getenv("OPENAI_MODEL", "gpt-4.1-mini"),
+            "usage": {
+                "input_tokens":  total.get("input_tokens", 0),
+                "output_tokens": total.get("output_tokens", 0),
+                "total_tokens":  total.get("input_tokens", 0) + total.get("output_tokens", 0),
+                "llm_calls":     total.get("calls", 0),
+            },
+        }
     else:
         provider = os.getenv("MODEL_PROVIDER", "openai").lower()
         if provider == "anthropic":

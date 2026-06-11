@@ -158,6 +158,8 @@ def _merge_broken_lines(text: str) -> str:
         if (
             i + 1 < len(lines)
             and stripped  # current line is not empty
+            and " " in stripped  # multi-word — a mid-sentence wrap, not a single-token
+                                 # list item like a skill ("Python" / "java" must NOT merge)
             and len(stripped) < 120  # not already a very long line
             and stripped[-1] not in SENTENCE_ENDERS
         ):

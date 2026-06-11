@@ -1,4 +1,6 @@
 import os
+import asyncio
+import logging
 import traceback
 import uvicorn
 from pathlib import Path
@@ -12,6 +14,13 @@ from processor import process_resume
 
 load_dotenv(Path(__file__).parent / ".env", override=True)
 
+# Configure root logging once so agent/orchestrator warnings (failed agents,
+# bullet-count mismatches, dropped data) actually surface in uvicorn/Lambda logs.
+logging.basicConfig(
+    level=os.getenv("LOG_LEVEL", "INFO").upper(),
+    format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
+)
+
 app = FastAPI(
     title="Resume Extraction Engine",
     description=(
@@ -21,6 +30,9 @@ app = FastAPI(
     version="2.0.0",
 )
 
+# CORS for browser-based callers (Next.js dev server, deployed frontend).
+# The Lambda Function URL has its own CORS config in Terraform; this is for
+# when the frontend points at a local `uvicorn main:app` server.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000", "http://10.0.0.47:3000"],
@@ -55,9 +67,9 @@ async def root():
         "service": "Resume Extraction Engine",
         "version": "2.0.0",
         "provider": os.getenv("MODEL_PROVIDER", "openai"),
-        "model": os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+        "model": os.getenv("OPENAI_MODEL", "gpt-4.1-mini")
                  if os.getenv("MODEL_PROVIDER", "openai") == "openai"
-                 else os.getenv("ANTHROPIC_MODEL", "claude-opus-4-7"),
+                 else os.getenv("ANTHROPIC_MODEL", "claude-opus-4-8"),
         "supported_formats":  SUPPORTED_DISPLAY,
         "max_file_size_mb": MAX_FILE_BYTES // (1024 * 1024),
         "endpoints": {
@@ -109,10 +121,14 @@ async def extract_resume(
         )
 
     # --- Extract text ---
+    # extract_text is sync and CPU-bound (pdfplumber). Run it in a worker
+    # thread so it doesn't block the event loop and stall concurrent uploads.
     try:
-        raw_text, page_count, extraction_info = extract_text(file_bytes, file_type)
+        raw_text, page_count, extraction_info = await asyncio.to_thread(
+            extract_text, file_bytes, file_type
+        )
     except RuntimeError as exc:
-        # Tesseract not installed etc.
+        # Unreadable file: scanned/image-only PDF, legacy .doc, corrupt archive, etc.
         raise HTTPException(status_code=422, detail=str(exc))
     except Exception as exc:
         traceback.print_exc()
@@ -122,9 +138,10 @@ async def extract_resume(
         raise HTTPException(
             status_code=422,
             detail=(
-                "No readable text found. "
-                "If this is a scanned document, install Tesseract OCR and set TESSERACT_CMD. "
-                "For image-based PDFs, ensure the file is not password-protected."
+                "No readable text found. This looks like a scanned or image-only "
+                "document — OCR is not supported. Please upload a text-based PDF, "
+                "DOCX, or TXT (e.g. export the original to a text PDF), and ensure "
+                "the file is not password-protected."
             ),
         )
 

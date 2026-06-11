@@ -69,31 +69,40 @@ class ValidatorAgent(BaseAgent):
 
         merged["work_experience"] = corrected_work
 
-        # Final pass: drop any job whose bullet count STILL doesn't match the
-        # structure map. Showing a half-extracted job is worse than omitting it.
+        # NOTE: we intentionally do NOT drop jobs whose bullet count still
+        # mismatches after re-extraction. A programmatic glyph count and the
+        # LLM's responsibility count legitimately differ (wrapped lines,
+        # sub-bullets, prose split differently), and dropping a real role is
+        # worse than showing it with a slightly off count. We log and keep it.
         remaining_mismatches = self._find_bullet_mismatches(corrected_work, jobs_meta)
-        if remaining_mismatches:
-            drop_indices = {idx for idx, _ in remaining_mismatches}
-            for idx, meta in remaining_mismatches:
-                logger.warning(
-                    "[ValidatorAgent] Dropping %s — bullet count still mismatched after re-extraction",
-                    meta.get("company", f"job {idx}"),
-                )
-            merged["work_experience"] = [
-                job for i, job in enumerate(corrected_work) if i not in drop_indices
-            ]
+        for idx, meta in remaining_mismatches:
+            logger.warning(
+                "[ValidatorAgent] %s — bullet count still mismatched after re-extraction; keeping best extraction",
+                meta.get("company", f"job {idx}"),
+            )
 
         return merged
 
     @staticmethod
     def _merge_job(original: dict, replacement: dict) -> dict:
-        """Overlay non-empty fields from `replacement` onto `original`."""
+        """Overlay non-empty fields from `replacement` onto `original`.
+
+        Completeness-preserving: for the list fields that carry the actual
+        content (responsibilities/achievements/technologies), keep whichever
+        side has MORE items so a sparser re-extraction never erases bullets the
+        first pass captured.
+        """
         merged = dict(original)
+        keep_longer = ("responsibilities", "achievements", "technologies_used")
         for k, v in replacement.items():
             # An empty string/list/dict/None from the re-extraction should not
             # overwrite a populated value from the first pass.
             if v is None or v == "" or v == [] or v == {}:
                 continue
+            if k in keep_longer and isinstance(v, list):
+                existing = original.get(k) or []
+                if isinstance(existing, list) and len(existing) > len(v):
+                    continue  # first pass had more — don't downgrade
             merged[k] = v
         return merged
 

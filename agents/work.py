@@ -137,7 +137,38 @@ class WorkExperienceAgent(BaseAgent):
                 else:
                     results[idx] = res
 
-        return [r for r in results if r is not None]
+        # Fill any still-failed slot with a metadata-only stub built from the
+        # structure map. This preserves POSITIONAL alignment between
+        # work_experience and structure["jobs"] — the ValidatorAgent zips the
+        # two together by index, so a dropped slot would shift every later job
+        # against the wrong bullet-count meta. It also keeps the failed job
+        # visible (with company/title/dates) rather than silently vanishing.
+        for i, res in enumerate(results):
+            if res is None:
+                results[i] = self._stub_from_meta(jobs_meta[i])
+
+        return results
+
+    @staticmethod
+    def _stub_from_meta(meta: dict) -> dict:
+        """Minimal job object from structure metadata when extraction fails."""
+        end = meta.get("end_date", "") or ""
+        return {
+            "company_name": meta.get("company", "") or "",
+            "job_title": meta.get("title", "") or "",
+            "start_date": meta.get("start_date", "") or "",
+            "end_date": end,
+            "is_current": end.strip().lower() in ("present", "current", "now"),
+            "location": meta.get("location"),
+            "department": None,
+            "employment_type": None,
+            "duration": None,
+            "responsibilities": [],
+            "achievements": [],
+            "technologies_used": [],
+            "description": None,
+            "projects": [],
+        }
 
     # ------------------------------------------------------------------ #
     # Per-job extraction

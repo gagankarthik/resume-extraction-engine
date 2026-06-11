@@ -40,26 +40,45 @@ _MONTH_MAP = {
 }
 
 
+# Quarter and season → representative start month, so spans like "Q3 2018" or
+# "Spring 2019" still contribute to tenure instead of being parsed as 0 months.
+_QUARTER_MONTH = {"q1": 1, "q2": 4, "q3": 7, "q4": 10}
+_SEASON_MONTH = {"winter": 1, "spring": 4, "summer": 7, "fall": 10, "autumn": 10}
+
+
 def _parse_date(s: str | None) -> date | None:
     if not s:
         return None
     s = s.strip()
-    if re.match(r"present|current|now", s, re.I):
+    if re.search(r"present|current|now|till\s*date|to\s*date|ongoing", s, re.I):
         return date.today()
-    # Year only
-    m = re.fullmatch(r"\d{4}", s)
+    # Quarter + year, e.g. "Q3 2018" / "2018 Q3"
+    m = re.search(r"\b(q[1-4])\b.*?(\d{4})|(\d{4}).*?\b(q[1-4])\b", s, re.I)
     if m:
-        return date(int(s), 1, 1)
-    # Month Year  e.g. "Jan 2020" or "2020-01"
-    m = re.match(r"(\w+)\s+(\d{4})", s)
+        q = (m.group(1) or m.group(4)).lower()
+        year = int(m.group(2) or m.group(3))
+        return date(year, _QUARTER_MONTH[q], 1)
+    # Season + year, e.g. "Spring 2019"
+    m = re.search(r"(winter|spring|summer|fall|autumn)\s+(\d{4})", s, re.I)
     if m:
-        month_str, year = m.group(1).lower(), int(m.group(2))
-        month = _MONTH_MAP.get(month_str[:3])
+        return date(int(m.group(2)), _SEASON_MONTH[m.group(1).lower()], 1)
+    # Month Year  e.g. "Jan 2020"
+    m = re.search(r"([A-Za-z]+)\s+(\d{4})", s)
+    if m:
+        month = _MONTH_MAP.get(m.group(1)[:3].lower())
         if month:
-            return date(year, month, 1)
-    m = re.match(r"(\d{4})[/-](\d{1,2})", s)
+            return date(int(m.group(2)), month, 1)
+    # Numeric  e.g. "2020-01", "01/2020", "2020"
+    m = re.search(r"(\d{4})[/-](\d{1,2})", s)
     if m:
-        return date(int(m.group(1)), int(m.group(2)), 1)
+        return date(int(m.group(1)), min(12, max(1, int(m.group(2)))), 1)
+    m = re.search(r"(\d{1,2})[/-](\d{4})", s)
+    if m:
+        return date(int(m.group(2)), min(12, max(1, int(m.group(1)))), 1)
+    # Year only (last, so it doesn't pre-empt the more specific patterns above)
+    m = re.search(r"\b(19|20)\d{2}\b", s)
+    if m:
+        return date(int(m.group(0)), 1, 1)
     return None
 
 
@@ -152,11 +171,13 @@ class AnalyticsAgent(BaseAgent):
     @staticmethod
     def _has_international(work: list[dict]) -> bool | None:
         locs = [j.get("location", "") or "" for j in work]
+        if not any(loc.strip() for loc in locs):
+            return None  # no location data anywhere → genuinely unknown
         countries = {"india", "uk", "united kingdom", "canada", "australia", "germany", "france", "singapore", "uae"}
         for loc in locs:
             if any(c in loc.lower() for c in countries):
                 return True
-        return None
+        return False  # we had locations and none were international
 
     @staticmethod
     def _primary_location(work: list[dict]) -> str | None:

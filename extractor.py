@@ -111,7 +111,21 @@ def _extract_one_pdf_page(page) -> str:
 # DOCX
 # ------------------------------------------------------------------ #
 
+# Legacy Word .doc files are OLE2 compound documents (magic D0 CF 11 E0 A1 B1 1A E1).
+# Modern .docx files are ZIP archives (magic PK\x03\x04). python-docx only reads
+# the latter, so detect the former up front and fail with an actionable message
+# instead of letting python-docx + the ZIP fallback both throw opaque errors.
+_OLE2_MAGIC = b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1"
+
+
 def _extract_docx(file_bytes: bytes) -> ExtractionResult:
+    if file_bytes[:8] == _OLE2_MAGIC:
+        raise RuntimeError(
+            "This is a legacy binary Word document (.doc), which is not supported. "
+            "Please open it in Microsoft Word and save as .docx, or export to PDF, "
+            "then re-upload."
+        )
+
     try:
         doc = Document(io.BytesIO(file_bytes))
     except Exception as docx_exc:

@@ -8,9 +8,28 @@ import os
 import re
 import asyncio
 import logging
+import contextvars
 from typing import Any
 
 logger = logging.getLogger(__name__)
+
+# Per-request token accumulator. Holds a mutable dict so that child tasks spawned
+# by asyncio.gather (Stage 2 agents, per-job work calls) all mutate the SAME
+# object and their usage rolls up to the request that called reset_token_usage().
+_token_usage: contextvars.ContextVar[dict | None] = contextvars.ContextVar(
+    "token_usage", default=None
+)
+
+
+def reset_token_usage() -> dict:
+    """Start a fresh accumulator for the current request; returns the dict."""
+    acc = {"input_tokens": 0, "output_tokens": 0, "calls": 0}
+    _token_usage.set(acc)
+    return acc
+
+
+def get_token_usage() -> dict | None:
+    return _token_usage.get()
 
 # ── Module-level singleton clients — created once, reused for every API call ─
 # Avoids creating a new HTTP connection pool per agent call (critical for
@@ -109,9 +128,11 @@ class BaseAgent:
                 # LLM_MAX_CONCURRENT concurrent in-flight calls.
                 async with sem:
                     if self.provider == "anthropic":
-                        return await self._call_anthropic(system, user, max_tokens=max_tokens)
+                        raw, usage = await self._call_anthropic(system, user, max_tokens=max_tokens)
                     else:
-                        return await self._call_openai(system, user, json_mode=json_mode, max_tokens=max_tokens, temperature=temperature)
+                        raw, usage = await self._call_openai(system, user, json_mode=json_mode, max_tokens=max_tokens, temperature=temperature)
+                    self._record_usage(usage)
+                    return raw, usage
             except Exception as exc:
                 last_exc = exc
                 if attempt < retries:
@@ -131,8 +152,17 @@ class BaseAgent:
                     await asyncio.sleep(wait)
         raise RuntimeError(f"[{self.name}] All LLM attempts failed: {last_exc}") from last_exc
 
+    @staticmethod
+    def _record_usage(usage: dict) -> None:
+        acc = _token_usage.get()
+        if acc is None:
+            return
+        acc["input_tokens"] += usage.get("input_tokens") or 0
+        acc["output_tokens"] += usage.get("output_tokens") or 0
+        acc["calls"] += 1
+
     async def _call_openai(self, system: str, user: str, *, json_mode: bool, max_tokens: int, temperature: float) -> tuple[str, dict]:
-        model = os.getenv("OPENAI_MODEL", "gpt-4o")
+        model = os.getenv("OPENAI_MODEL", "gpt-4.1-mini")
         client = _get_openai_client()
         kwargs: dict[str, Any] = dict(
             model=model,
