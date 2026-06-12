@@ -549,6 +549,10 @@ async def process_resume(
                 f"First 400 chars of response:\n{text[:400]}"
             )
 
+    # The audit report travels under _metadata so it reaches the UI without
+    # polluting the resume schema itself.
+    audit_report = extracted.pop("_audit", None) if isinstance(extracted, dict) else None
+
     extracted["_metadata"] = {
         "request_id":        request_id,
         "file_name":         file_name,
@@ -564,4 +568,13 @@ async def process_resume(
     }
 
     cleaned, warnings = validate_resume_json(extracted)
+
+    # Surface what the pipeline knows about its own output quality instead of
+    # discarding it — the UI shows this so incomplete extractions are visible.
+    meta = cleaned.setdefault("_metadata", {})
+    if audit_report:
+        meta["audit"] = audit_report
+    if warnings:
+        meta["validation_warnings"] = warnings
+
     return cleaned

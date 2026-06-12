@@ -6,6 +6,8 @@ Stage 2 (parallel):    PersonalAgent, WorkAgent, EducationAgent, SkillsAgent,
                        CertificationsAgent, SupplementalAgent
 Stage 3 (sequential):  AnalyticsAgent   → computes analytics from merged data
 Stage 4 (sequential):  ValidatorAgent   → cross-validates bullet counts, re-extracts mismatches
+Stage 5 (sequential):  CompletenessAuditorAgent → grounds contact/client/project names against
+                       the source text, measures coverage, recovers missed content additively
 """
 from __future__ import annotations
 
@@ -22,6 +24,7 @@ from agents.certifications import CertificationsAgent
 from agents.supplemental import SupplementalAgent
 from agents.analytics import AnalyticsAgent
 from agents.validator_agent import ValidatorAgent
+from agents.auditor import CompletenessAuditorAgent
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +49,7 @@ class ResumeOrchestrator:
         self.supp_agent        = SupplementalAgent()
         self.analytics_agent   = AnalyticsAgent()
         self.validator_agent   = ValidatorAgent()
+        self.auditor_agent     = CompletenessAuditorAgent()
 
     async def run(self, normalized_text: str) -> dict:
         # ── Stage 1: Structure discovery ──────────────────────────────────
@@ -118,6 +122,16 @@ class ResumeOrchestrator:
             merged = await self.validator_agent.run(merged, normalized_text, structure)
         except Exception as exc:
             logger.warning("[Orchestrator] Validation pass failed: %s", exc)
+
+        # ── Stage 5: Completeness audit ───────────────────────────────────
+        # Grounds hallucination-prone values against the source text, measures
+        # how much of the resume actually made it into the JSON, and recovers
+        # any missed content additively. Never fails the request.
+        logger.info("[Orchestrator] Stage 5 — completeness audit")
+        try:
+            merged = await self.auditor_agent.run(merged, normalized_text)
+        except Exception as exc:
+            logger.warning("[Orchestrator] Completeness audit failed: %s", exc)
 
         # Final sanity log
         we = merged.get("work_experience", [])

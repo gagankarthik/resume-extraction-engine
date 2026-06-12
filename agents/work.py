@@ -56,6 +56,7 @@ Rules:
 - projects[] rules (BE STRICT):
   • Use projects[] ONLY when the source resume EXPLICITLY labels sub-projects with their own headings (e.g. "Project 1: <Name>" or a discrete project name on its own line followed by its own bullet list).
   • When the segment DOES contain explicitly labeled sub-projects, you MUST extract EVERY one of them — each with its projectName, clientName (if written), projectLocation (if written), keyTechnologies (if written), and its COMPLETE bullet list copied verbatim into projectResponsibilities[]. NEVER return a project with an empty projectResponsibilities[] when bullets exist under it, and NEVER skip a labeled project.
+  • clientName: copy CHARACTER-FOR-CHARACTER from the segment (look for "Client:", "Customer:", "End Client:" labels or the client named in the project heading). If no client is written for THIS project, return null — NEVER guess, NEVER substitute a similar-sounding company, and NEVER reuse a client from a different project or job.
   • DO NOT invent project names by grouping responsibilities by topic. A long flat list of bullets is NOT a multi-project structure — it's a single role's responsibilities. Put them all in responsibilities[].
   • If you find yourself synthesizing project names from bullet content (e.g. "Lakehouse Architecture Design", "BigID Implementation"), STOP — those are responsibility topics, not labeled sub-projects. Put them as flat entries in responsibilities[].
 - achievements[] should contain ONLY items with measurable results (%, $, headcount, time saved, etc.).
