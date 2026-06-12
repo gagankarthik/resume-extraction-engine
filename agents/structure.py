@@ -32,6 +32,8 @@ Return a JSON object with this exact shape:
 
 Rules:
 - List EVERY job in ORDER as they appear in the resume (top to bottom), including old roles from 20-25 years ago.
+- start_date / end_date: copy EXACTLY as written, INCLUDING the month when one is present (e.g. "Jan 2020" — never reduce to just "2020").
+- title: every job must have its title when one is written. location: fill it whenever a city/state appears in the job's header lines.
 - anchor_line MUST be the exact verbatim text of the very first line of the job entry (usually the company name line). Copy it character-for-character — no paraphrasing.
 - If the resume has an "ORGANISATIONAL SCAN" or compact job-list section, list every company/role in that section.
 - has_sub_projects rules (BE STRICT):

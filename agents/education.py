@@ -5,10 +5,15 @@ from .base import BaseAgent
 EDUCATION_SYSTEM = """Extract ALL education entries from the resume.
 
 Rules:
-- degree_type must be a standard abbreviation: B.S. / B.A. / B.E. / B.Tech / M.S. / M.A. / MBA / MCA / M.Tech / Ph.D. / Diploma / Associate / etc.
+- degree = the degree EXACTLY as written in the resume, verbatim.
+- degree_type = the standard abbreviation of the SAME degree that is written. Use these forms: AA / AS / BA / BS / BE / BTech / MS / MA / MBA / MCA / MTech / PhD / Diploma / Associate.
+  • NEVER convert between degree families. "BS" / "B.S." / "Bachelor of Science" → BS (NEVER BTech). "B.Tech" / "Bachelor of Technology" → BTech (NEVER BS). "Master of Business Administration" / "Masters of Business Administration" → MBA. "Bachelor of Engineering" → BE.
+  • Abbreviate ONLY — do not change the degree itself. If unsure of the family, copy what is written.
 - Extract field_of_study (e.g. "Computer Science", "Business Administration").
-- Extract end_date from any graduation year — even a standalone 4-digit year.
+- Extract location: the institution's city/state/country if written ANYWHERE in the entry (including on the same line as the institution name). Use null only if no location is written.
+- Extract end_date from any graduation year — even a standalone 4-digit year. Keep the month if one is written (e.g. "May 2018").
 - Extract GPA, percentage, or grade when present.
+- Do NOT invent any value that is not written in the resume — missing fields stay null.
 
 Return ONLY this JSON:
 {

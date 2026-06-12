@@ -43,7 +43,10 @@ Extract into this JSON shape:
 }}
 
 Rules:
-- Copy every responsibility VERBATIM — do not paraphrase, summarize, or merge.
+- NEVER fabricate content. Every value you return MUST appear in the source text. If a value is not in the segment, use null / [] — do not guess, infer, or fill in plausible-sounding data.
+- Copy every responsibility VERBATIM — do not paraphrase, summarize, or merge. Each responsibility must be the COMPLETE sentence/bullet from the source — never truncate or cut a sentence partway.
+- start_date / end_date: copy EXACTLY as written, INCLUDING the month when one is present (e.g. "Jan 2020", not "2020").
+- location: extract the job's city/state whenever it appears anywhere in the job header lines — do not leave it null if a location is written.
 - Strip leading bullet glyphs (•, ●, ▪, ▸, ‣, ○, ◦, ►, -, *, –, —) from each entry.
 - Bullets may be marked by ANY of these glyphs, by numbered lists (1., 1)), or by no glyph at all (prose).
 - If the job uses PROSE paragraphs (no explicit bullets): split each sentence into an individual item in responsibilities[]. Do NOT put job duties into description.
@@ -52,6 +55,7 @@ Rules:
 - description should be NULL or a single short sentence describing the COMPANY/ROLE context only (e.g. "Healthcare insurer in California"). NEVER put duty bullets, action verbs, or summary sentences into description — those belong in responsibilities[].
 - projects[] rules (BE STRICT):
   • Use projects[] ONLY when the source resume EXPLICITLY labels sub-projects with their own headings (e.g. "Project 1: <Name>" or a discrete project name on its own line followed by its own bullet list).
+  • When the segment DOES contain explicitly labeled sub-projects, you MUST extract EVERY one of them — each with its projectName, clientName (if written), projectLocation (if written), keyTechnologies (if written), and its COMPLETE bullet list copied verbatim into projectResponsibilities[]. NEVER return a project with an empty projectResponsibilities[] when bullets exist under it, and NEVER skip a labeled project.
   • DO NOT invent project names by grouping responsibilities by topic. A long flat list of bullets is NOT a multi-project structure — it's a single role's responsibilities. Put them all in responsibilities[].
   • If you find yourself synthesizing project names from bullet content (e.g. "Lakehouse Architecture Design", "BigID Implementation"), STOP — those are responsibility topics, not labeled sub-projects. Put them as flat entries in responsibilities[].
 - achievements[] should contain ONLY items with measurable results (%, $, headcount, time saved, etc.).
@@ -62,9 +66,10 @@ Rules:
 WORK_SYSTEM_FULL_FALLBACK = """You are a work experience extraction specialist. Extract ALL work experience entries from the resume. This is a long-career resume — include EVERY job, even old ones from 15-25 years ago.
 
 CRITICAL RULES:
-1. Include EVERY job entry — do not skip any role, even old ones.
-2. NEVER skip or add bullet points. Extract EXACTLY the bullets that exist.
-3. Copy all responsibilities VERBATIM — do not paraphrase or merge.
+1. Include EVERY job entry — do not skip any role, even old ones. Every job must have its job_title when one is written.
+2. NEVER skip or add bullet points. Extract EXACTLY the bullets that exist. NEVER fabricate content that is not in the resume.
+3. Copy all responsibilities VERBATIM — do not paraphrase or merge. Never truncate a sentence partway.
+3b. Copy dates EXACTLY as written, INCLUDING months ("Jan 2020", not "2020"). Extract each job's location when written.
 4. Bullets may be marked by ANY glyph (•, ●, ▪, ▸, ‣, ○, ◦, ►, -, *, –, —), numbered (1., 1)), or no glyph at all (prose). Treat them all as bullets.
 5. If the job uses PROSE paragraphs (no bullet points): split each sentence into a separate item in responsibilities[]. Do NOT use the description field for job duties.
 6. NEVER leave responsibilities[] empty if the job segment has ANY duty/narrative text — every such job must have at least one entry. Only leave it empty if the segment is truly metadata-only (company/date/title/location/tech list).

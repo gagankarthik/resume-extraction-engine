@@ -28,7 +28,10 @@ SUPP_SYSTEM = """Extract all supplemental sections from the resume. Return ONLY 
   "raw_sections": {"section_names_found":[],"unclassified_content":null}
 }
 
-If a section has no data, use an empty array [] or null — never include placeholder items.
+Rules:
+- If a section has no data, use an empty array [] or null — never include placeholder items.
+- NEVER invent data. Every value must be copied from the resume text; missing values stay null.
+- projects: extract ANY standalone "Projects" / "Academic Projects" / "Personal Projects" / "Key Projects" section, with every bullet under each project copied verbatim into highlights[]. Do NOT skip this section when it exists. (Projects that are nested inside a specific job's work experience are handled elsewhere — only extract standalone project sections here.)
 """
 
 

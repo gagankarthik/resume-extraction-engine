@@ -6,6 +6,8 @@ SKILLS_SYSTEM = """Extract ONLY skills that are explicitly named in the resume. 
 
 A skill is a named technology, tool, platform, language, framework, methodology, or concept that appears verbatim (or near-verbatim) in the resume. Job duties, action verbs, and activity phrases are NOT skills.
 
+Skills sections come in MANY layouts — comma lists, bullet lists, two-column tables, skill matrices, category grids, sidebars. Scan the ENTIRE document for them (a "Technical Skills" / "Skills" / "Tools" section may appear anywhere, including after work experience). Never return empty output when the resume contains a skills section.
+
 You will produce TWO views of the same skills inventory:
 
 (A) NORMALIZED CATEGORIES — fixed taxonomy, every skill placed into the best-fit bucket:

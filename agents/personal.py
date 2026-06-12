@@ -25,6 +25,12 @@ Return ONLY this JSON:
   "objective": null
 }
 
+Rules for the name fields:
+- full_name MUST be the candidate's COMPLETE name — first, middle (if present), AND last name. The name may be split across lines, columns, or header/footer; combine all parts. NEVER drop the last name.
+- If the resume shows the name in ALL CAPS (e.g. "JOHN SMITH"), convert it to standard Title Case ("John Smith"). Preserve internal punctuation (O'Brien, Smith-Jones) and suffixes (Jr., III).
+- Always fill first_name and last_name from full_name (last_name = the final surname token).
+- Do NOT invent any value that is not present in the resume.
+
 Rules for professional_summary:
 - Extract the full text of any section labelled "Summary", "Professional Summary", "Profile", "About Me", "Career Summary", "Executive Summary", "Overview", or similar.
 - Copy it verbatim — do not paraphrase or shorten.
