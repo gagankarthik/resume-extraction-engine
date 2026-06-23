@@ -4,6 +4,7 @@ The provider client is a module-level singleton so the connection pool is reused
 across all concurrent requests (important for multi-client production use).
 """
 import asyncio
+import logging
 import os
 import json
 import uuid
@@ -13,7 +14,10 @@ from dotenv import load_dotenv
 
 from validator import validate_resume_json
 from orchestrator import get_orchestrator
+from agents.auditor import ground_check
 from agents.base import reset_token_usage, get_token_usage
+
+logger = logging.getLogger(__name__)
 
 load_dotenv(Path(__file__).parent / ".env", override=True)
 
@@ -550,6 +554,16 @@ async def process_resume(
                 f"LLM returned invalid JSON ({exc}). "
                 f"First 400 chars of response:\n{text[:400]}"
             )
+
+        # The single-shot path skips the orchestrator's audit stage, so run the
+        # groundedness guard here too — it strips AI-fabricated metric/impact
+        # bullets and ungrounded contact/client values against the source text.
+        try:
+            extracted, audit_warnings = ground_check(extracted, raw_text)
+            if audit_warnings:
+                extracted["_audit"] = {"warnings": audit_warnings}
+        except Exception as exc:
+            logger.warning("[process_resume] Single-shot ground_check failed: %s", exc)
 
     # The audit report travels under _metadata so it reaches the UI without
     # polluting the resume schema itself.
