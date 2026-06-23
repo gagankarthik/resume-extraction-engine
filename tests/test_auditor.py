@@ -104,6 +104,35 @@ def test_duplicate_bullets_deduped():
     assert len(merged["work_experience"][0]["responsibilities"]) == 2
 
 
+def test_fabricated_metric_bullets_dropped():
+    merged = {
+        "personal_information": {},
+        "work_experience": [{
+            "company_name": "Acme Corporation",
+            "responsibilities": [
+                # Real, grounded bullets — must be KEPT (even with a real metric).
+                "Designed and implemented scalable ETL pipelines using Apache Spark and Airflow",
+                "Reduced nightly batch processing time by 40 percent across all regions",
+                "Mentored four junior engineers on data modeling best practices",
+                # AI-fabricated padding — ungrounded + impact/metric → must be DROPPED.
+                "Improved release predictability by 40%",
+                "Increased sprint velocity by 20%",
+                "Delivered measurable cost optimization through license renegotiation and capacity right-sizing",
+            ],
+            "achievements": ["Accelerated time-to-market for 3 major platform launches"],
+        }],
+    }
+    merged, warnings = ground_check(merged, RESUME_TEXT)
+    resp = merged["work_experience"][0]["responsibilities"]
+    assert resp == [
+        "Designed and implemented scalable ETL pipelines using Apache Spark and Airflow",
+        "Reduced nightly batch processing time by 40 percent across all regions",
+        "Mentored four junior engineers on data modeling best practices",
+    ], resp
+    assert merged["work_experience"][0]["achievements"] == [], merged["work_experience"][0]["achievements"]
+    assert any("fabricated" in w.lower() for w in warnings), warnings
+
+
 def test_coverage_detects_missed_lines():
     full = {
         "work_experience": [{

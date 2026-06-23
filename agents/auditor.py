@@ -64,6 +64,50 @@ def is_grounded(value: str, text_token_set: set[str]) -> bool:
     return present / len(toks) >= 0.8
 
 
+# ── Fabricated-bullet guard ─────────────────────────────────────────────────
+
+# Quantified-impact phrasing the LLM tends to invent: "by 40%", "$2M", "3x".
+_METRIC_RE = re.compile(r"\d+(?:\.\d+)?\s*%|\$\s*\d|\bby\s+\d|\b\d+\s*x\b", re.I)
+# Achievement/impact verbs that lead AI-padded sentences.
+_IMPACT_LEAD_RE = re.compile(
+    r"^\W*(improv|reduc|increas|accelerat|deliver|optimi[sz]|enhanc|streamlin|"
+    r"boost|driv|achiev|generat|grew|grow|cut|decreas|sav|spearhead|slash|"
+    r"maximi[sz]|minimi[sz]|elevat|transform)",
+    re.I,
+)
+
+
+def _bullet_is_fabricated(bullet: str, token_set: set[str]) -> bool:
+    """True only when a responsibility/achievement looks like AI padding.
+
+    Guard is deliberately conservative: a bullet is removed ONLY when BOTH
+    hold, so genuine verbatim content is never lost:
+
+    1. It is NOT grounded in the source text — its significant words largely
+       fail to trace back to the resume (every real bullet is copied verbatim,
+       so real content stays grounded even when it contains metrics).
+    2. It is phrased as quantified/impact padding — it quotes a metric
+       ("by 40%", "$2M") or opens with an achievement verb ("Improved…",
+       "Reduced…", "Delivered measurable cost optimization…").
+
+    This targets invented statistics and generic impact sentences while leaving
+    ordinary duty bullets (even oddly tokenized ones) untouched.
+    """
+    if not isinstance(bullet, str) or not bullet.strip():
+        return False
+    if is_grounded(bullet, token_set):
+        return False  # words trace to the resume → real content
+    return bool(_METRIC_RE.search(bullet) or _IMPACT_LEAD_RE.match(bullet))
+
+
+def _scrub_bullets(items: Any, token_set: set[str]) -> tuple[list, int]:
+    """Return (kept_items, dropped_count) for a responsibility/achievement list."""
+    if not isinstance(items, list):
+        return items, 0
+    kept = [b for b in items if not _bullet_is_fabricated(b, token_set)]
+    return kept, len(items) - len(kept)
+
+
 def _url_fragment(url: str) -> str:
     u = _squash(url)
     u = re.sub(r"^https?://", "", u).removeprefix("www.")
@@ -109,6 +153,18 @@ def ground_check(merged: dict, raw_text: str) -> tuple[dict, list[str]]:
         if not isinstance(job, dict):
             continue
         company = job.get("company_name") or "?"
+
+        # Drop AI-fabricated responsibilities/achievements (invented metrics or
+        # ungrounded impact sentences) before any further processing.
+        resp_scrubbed, resp_dropped = _scrub_bullets(job.get("responsibilities"), token_set)
+        if resp_dropped:
+            job["responsibilities"] = resp_scrubbed
+            warnings.append(f"Removed {resp_dropped} fabricated/ungrounded responsibility bullet(s) ({company})")
+        ach_scrubbed, ach_dropped = _scrub_bullets(job.get("achievements"), token_set)
+        if ach_dropped:
+            job["achievements"] = ach_scrubbed
+            warnings.append(f"Removed {ach_dropped} fabricated/ungrounded achievement(s) ({company})")
+
         kept_projects = []
         for proj in job.get("projects") or []:
             if not isinstance(proj, dict):
@@ -126,6 +182,10 @@ def ground_check(merged: dict, raw_text: str) -> tuple[dict, list[str]]:
                 resp.extend(b for b in bullets if _squash(b) not in existing)
                 warnings.append(f"Dropped invented project heading '{pname}' ({company}); kept its bullets")
                 continue
+            pr_scrubbed, pr_dropped = _scrub_bullets(proj.get("projectResponsibilities"), token_set)
+            if pr_dropped:
+                proj["projectResponsibilities"] = pr_scrubbed
+                warnings.append(f"Removed {pr_dropped} fabricated project bullet(s) ({company}/{pname or 'project'})")
             kept_projects.append(proj)
         if job.get("projects") is not None:
             job["projects"] = kept_projects
@@ -144,6 +204,15 @@ def ground_check(merged: dict, raw_text: str) -> tuple[dict, list[str]]:
             if len(deduped) != len(resp):
                 warnings.append(f"Removed {len(resp) - len(deduped)} duplicate bullet(s) ({company})")
             job["responsibilities"] = deduped
+
+    # Standalone projects: scrub fabricated highlights the same way.
+    for proj in merged.get("projects") or []:
+        if not isinstance(proj, dict):
+            continue
+        hl_scrubbed, hl_dropped = _scrub_bullets(proj.get("highlights"), token_set)
+        if hl_dropped:
+            proj["highlights"] = hl_scrubbed
+            warnings.append(f"Removed {hl_dropped} fabricated project highlight(s) ({proj.get('name') or 'project'})")
 
     return merged, warnings
 

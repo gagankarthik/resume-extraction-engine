@@ -44,6 +44,8 @@ Extract into this JSON shape:
 
 Rules:
 - NEVER fabricate content. Every value you return MUST appear in the source text. If a value is not in the segment, use null / [] — do not guess, infer, or fill in plausible-sounding data.
+- NEVER invent metrics, percentages, dollar figures, or counts. Only keep a number (e.g. "40%", "$2M", "reduced defects by 35%", "3 platform launches") if that EXACT number is written in the source segment. Do not add, estimate, round, or embellish numbers, and do not append quantified impact ("by 40%", "improving efficiency", "increasing velocity") that the source does not literally state.
+- NEVER add generic AI-style impact sentences that are not in the source (e.g. "Improved release predictability by 40%", "Reduced production defects by 35%", "Accelerated time-to-market", "Increased sprint velocity by 20%", "Delivered measurable cost optimization through license renegotiation and capacity right-sizing"). If the resume does not contain the sentence, it MUST NOT appear in the output.
 - Copy every responsibility VERBATIM — do not paraphrase, summarize, or merge. Each responsibility must be the COMPLETE sentence/bullet from the source — never truncate or cut a sentence partway.
 - start_date / end_date: copy EXACTLY as written, INCLUDING the month when one is present (e.g. "Jan 2020", not "2020").
 - location: extract the job's city/state whenever it appears anywhere in the job header lines — do not leave it null if a location is written.

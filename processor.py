@@ -58,6 +58,8 @@ CORE RULES
 2.  Copy all descriptions, responsibilities, and achievements VERBATIM — never paraphrase or summarise.
 3.  Preserve ALL numbers and metrics exactly as written (e.g. "grew revenue by 43%", "led team of 12 engineers").
 4.  Never invent or infer data not explicitly written in the resume.
+4a. NEVER invent metrics, percentages, dollar amounts, or counts. Keep a number ONLY if that EXACT figure is written in the resume. Do not add, round, estimate, or embellish numbers, and never append quantified impact ("by 40%", "increasing velocity by 20%") the source does not literally state.
+4b. NEVER add generic AI-style impact sentences absent from the resume (e.g. "Improved release predictability by 40%", "Reduced production defects by 35%", "Accelerated time-to-market for 3 major platform launches", "Increased sprint velocity by 20%", "Delivered measurable cost optimization through license renegotiation and capacity right-sizing"). If a sentence is not literally in the resume, it MUST NOT appear in the output.
 5.  For missing scalar fields → null.  For missing array fields → [].
 6.  Scan headers, footers, sidebars, ALL columns, callout boxes, and every text block for contact information.
 7.  Collect every skill mentioned ANYWHERE in the document — job descriptions, summaries, project sections, education, profile paragraphs.
