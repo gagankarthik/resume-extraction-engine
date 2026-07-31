@@ -4,8 +4,8 @@ Uses pure Python for most fields; asks LLM only for industry/function classifica
 """
 from __future__ import annotations
 
-import re
 import logging
+import re
 from datetime import date
 
 from .base import BaseAgent

@@ -8,12 +8,12 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from agents.auditor import (  # noqa: E402
-    ground_check,
-    coverage_report,
-    merge_recovered,
-    is_grounded,
+from agents.auditor import (
     _tokens,
+    coverage_report,
+    ground_check,
+    is_grounded,
+    merge_recovered,
 )
 
 RESUME_TEXT = """

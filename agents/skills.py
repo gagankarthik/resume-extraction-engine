@@ -1,5 +1,6 @@
 """SkillsAgent — full-document skills extraction across all categories."""
 from __future__ import annotations
+
 from .base import BaseAgent
 
 SKILLS_SYSTEM = """Extract ONLY skills that are explicitly named in the resume. Do NOT infer, generate, or extract activities or tasks from job responsibilities.

@@ -54,7 +54,7 @@ class ValidatorAgent(BaseAgent):
             return_exceptions=True,
         )
 
-        for (idx, _), result in zip(tasks, results):
+        for (idx, _), result in zip(tasks, results, strict=True):
             if isinstance(result, Exception):
                 logger.warning("[ValidatorAgent] Re-extraction failed for job %d: %s", idx, result)
                 continue
@@ -112,7 +112,7 @@ class ValidatorAgent(BaseAgent):
         self, work: list[dict], jobs_meta: list[dict]
     ) -> list[tuple[int, dict]]:
         mismatches = []
-        for i, (job, meta) in enumerate(zip(work, jobs_meta)):
+        for i, (job, meta) in enumerate(zip(work, jobs_meta, strict=False)):
             expected = meta.get("bullet_count", 0)
             if expected == 0:
                 continue

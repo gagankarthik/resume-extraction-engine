@@ -136,7 +136,7 @@ class WorkExperienceAgent(BaseAgent):
                 *[self._extract_single_job(text, jobs_meta[i]) for i in retry_indices],
                 return_exceptions=True,
             )
-            for idx, res in zip(retry_indices, retry_pass):
+            for idx, res in zip(retry_indices, retry_pass, strict=True):
                 if isinstance(res, Exception):
                     logger.error(
                         "[WorkExperienceAgent] Job %d (%s) permanently failed after retry: %s",

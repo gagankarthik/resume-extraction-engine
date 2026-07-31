@@ -1,4 +1,5 @@
 from mangum import Mangum
+
 from main import app
 
 # AWS Lambda entrypoint — use "handler.handler" as the Lambda handler setting.

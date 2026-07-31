@@ -13,7 +13,7 @@ _CHAR_MAP = {
     "ﬃ": "ffi",  # ﬃ
     "ﬄ": "ffl",  # ﬄ
     " ": " ",    # non-breaking space
-    "​": "",     # zero-width space
+    "\u200b": "",     # zero-width space
     "‌": "",     # zero-width non-joiner
     "‍": "",     # zero-width joiner
     "–": "-",    # en dash

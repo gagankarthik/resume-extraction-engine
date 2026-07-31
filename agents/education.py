@@ -1,5 +1,6 @@
 """EducationAgent — focused extraction of education entries."""
 from __future__ import annotations
+
 from .base import BaseAgent
 
 EDUCATION_SYSTEM = """Extract ALL education entries from the resume.

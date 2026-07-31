@@ -1,13 +1,14 @@
-import os
 import asyncio
 import logging
+import os
 import traceback
-import uvicorn
 from pathlib import Path
-from fastapi import FastAPI, File, Query, UploadFile, HTTPException
+
+import uvicorn
+from dotenv import load_dotenv
+from fastapi import FastAPI, File, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from dotenv import load_dotenv
 
 from extractor import extract_text
 from processor import process_resume
@@ -129,10 +130,10 @@ async def extract_resume(
         )
     except RuntimeError as exc:
         # Unreadable file: scanned/image-only PDF, legacy .doc, corrupt archive, etc.
-        raise HTTPException(status_code=422, detail=str(exc))
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     except Exception as exc:
         traceback.print_exc()
-        raise HTTPException(status_code=422, detail=f"Text extraction failed: {exc}")
+        raise HTTPException(status_code=422, detail=f"Text extraction failed: {exc}") from exc
 
     if not raw_text.strip():
         raise HTTPException(
@@ -157,9 +158,9 @@ async def extract_resume(
             project_id=project_id,
         )
     except ValueError as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"LLM extraction failed: {exc}")
+        raise HTTPException(status_code=500, detail=f"LLM extraction failed: {exc}") from exc
 
     return JSONResponse(content=result)
 

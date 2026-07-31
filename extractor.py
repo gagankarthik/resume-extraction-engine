@@ -12,11 +12,11 @@ from xml.etree import ElementTree as ET
 
 import pdfplumber
 from docx import Document
+from docx.oxml.ns import qn
 from docx.table import Table as DocxTable
 from docx.text.paragraph import Paragraph as DocxParagraph
-from docx.oxml.ns import qn
 
-from normalizer import normalize_text, deduplicate_page_content
+from normalizer import deduplicate_page_content, normalize_text
 
 # Characters of text below which a PDF page is considered unparseable
 _SPARSE_THRESHOLD = 50

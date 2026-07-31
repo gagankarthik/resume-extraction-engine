@@ -16,16 +16,16 @@ import logging
 from typing import Any
 
 from agents import report
-from agents.structure import StructureAgent
-from agents.personal import PersonalInfoAgent
-from agents.work import WorkExperienceAgent
-from agents.education import EducationAgent
-from agents.skills import SkillsAgent
-from agents.certifications import CertificationsAgent
-from agents.supplemental import SupplementalAgent
 from agents.analytics import AnalyticsAgent
-from agents.validator_agent import ValidatorAgent
 from agents.auditor import CompletenessAuditorAgent
+from agents.certifications import CertificationsAgent
+from agents.education import EducationAgent
+from agents.personal import PersonalInfoAgent
+from agents.skills import SkillsAgent
+from agents.structure import StructureAgent
+from agents.supplemental import SupplementalAgent
+from agents.validator_agent import ValidatorAgent
+from agents.work import WorkExperienceAgent
 
 logger = logging.getLogger(__name__)
 

@@ -1,5 +1,6 @@
 """PersonalInfoAgent — focused extraction of personal information, professional summary, and objective."""
 from __future__ import annotations
+
 from .base import BaseAgent
 
 PERSONAL_SYSTEM = """Extract personal information, the professional summary, and the objective statement from the resume. Scan ALL sections — headers, footers, sidebars, every column.

@@ -1,5 +1,6 @@
 """CertificationsAgent — focused extraction of certifications."""
 from __future__ import annotations
+
 from .base import BaseAgent
 
 CERT_SYSTEM = """Extract ALL certifications, licenses, and certificates from the resume.

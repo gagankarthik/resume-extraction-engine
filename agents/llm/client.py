@@ -23,11 +23,10 @@ import re
 from dataclasses import dataclass, field
 from typing import Any
 
-from config import LLMSettings, get_settings
-
 from agents import report
 from agents.json_salvage import UnsalvageableJSON, count_items, salvage
 from agents.llm.providers import Completion, LLMProvider, build_provider
+from config import LLMSettings, get_settings
 
 logger = logging.getLogger(__name__)
 

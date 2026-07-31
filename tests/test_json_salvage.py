@@ -15,7 +15,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from agents.json_salvage import (  # noqa: E402
+from agents.json_salvage import (
     UnsalvageableJSON,
     count_items,
     salvage,
@@ -149,7 +149,7 @@ if __name__ == "__main__":
         try:
             fn()
             print(f"PASS  {name}")
-        except Exception as exc:  # noqa: BLE001 - test runner
+        except Exception as exc:
             failures += 1
             print(f"FAIL  {name}: {exc}")
     print(f"\n{'all tests passed' if not failures else f'{failures} failure(s)'}")

@@ -5,6 +5,7 @@ references, patents, memberships, conferences, courses, training,
 extracurricular, professional summary, objective, raw_sections.
 """
 from __future__ import annotations
+
 from .base import BaseAgent
 
 SUPP_SYSTEM = """Extract all supplemental sections from the resume. Return ONLY this JSON (use [] for missing arrays, null for missing scalars):

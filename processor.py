@@ -4,19 +4,20 @@ The provider client is a module-level singleton so the connection pool is reused
 across all concurrent requests (important for multi-client production use).
 """
 import asyncio
+import json
 import logging
 import os
-import json
 import uuid
-from pathlib import Path
 from datetime import datetime, timezone
+from pathlib import Path
+
 from dotenv import load_dotenv
 
-from validator import validate_resume_json
-from orchestrator import get_orchestrator
 from agents.auditor import ground_check
-from agents.base import reset_token_usage, get_token_usage
+from agents.base import get_token_usage, reset_token_usage
 from agents.report import reset_report
+from orchestrator import get_orchestrator
+from validator import validate_resume_json
 
 logger = logging.getLogger(__name__)
 
@@ -519,11 +520,11 @@ async def process_resume(
         reset_report()
         try:
             extracted = await asyncio.wait_for(orchestrator.run(raw_text), timeout=timeout_secs)
-        except asyncio.TimeoutError:
+        except asyncio.TimeoutError as exc:
             raise ValueError(
                 f"Extraction timed out after {timeout_secs}s. "
                 "The resume may be unusually long — try splitting it or increasing EXTRACTION_TIMEOUT_SECONDS."
-            )
+            ) from exc
         total = get_token_usage() or usage_acc
         llm_info = {
             "provider": "orchestrator",
@@ -555,7 +556,7 @@ async def process_resume(
             raise ValueError(
                 f"LLM returned invalid JSON ({exc}). "
                 f"First 400 chars of response:\n{text[:400]}"
-            )
+            ) from exc
 
         # The single-shot path skips the orchestrator's audit stage, so run the
         # groundedness guard here too — it strips AI-fabricated metric/impact
