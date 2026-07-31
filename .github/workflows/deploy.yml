@@ -25,7 +25,10 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: pip
 
-      - run: pip install ruff
+      # Pinned deliberately. Unpinned, a ruff release that widens its default
+      # rule set fails the deploy on code nobody touched, which is what happened
+      # when 0.16 landed. Rule selection lives in ruff.toml.
+      - run: pip install ruff==0.16.0
       - run: ruff check .
 
   # ── Build + Deploy (main only) ────────────────────────────────────────────────

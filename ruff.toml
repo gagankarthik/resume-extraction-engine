@@ -1,0 +1,60 @@
+# Lint configuration.
+#
+# This file exists because it was missing. With no config, ruff applies whatever
+# its current release defaults to, so a new ruff version silently changed the
+# rule set and failed a deploy on code nobody had touched. Which rules run is a
+# project decision, and it belongs in the repository.
+#
+# The CI workflow pins the ruff version for the same reason.
+
+target-version = "py311"
+line-length = 110
+
+exclude = [
+    ".venv",
+    "package",
+    "__pycache__",
+]
+
+[lint]
+# Correctness and clarity, not house style. Each of these catches something
+# that can actually be wrong at runtime.
+select = [
+    "E4",    # imports
+    "E7",    # statement-level mistakes
+    "E9",    # syntax and IO errors
+    "F",     # pyflakes: undefined names, unused imports, f-string bugs
+    "I",     # import ordering, so diffs stay small
+    "B",     # bugbear: mutable defaults, loop-variable capture
+    "PLE",   # pylint errors, including invisible-character literals
+    "RUF",   # ruff's own correctness rules
+]
+
+ignore = [
+    # `Optional[X]` and `X | None` are equivalent on 3.11. Rewriting 160 Pydantic
+    # field annotations to satisfy a style preference is churn with real risk in
+    # a schema that is working, and no benefit.
+    "UP045",
+    "UP007",
+    # The pipeline is deliberately fault-tolerant: one section failing must not
+    # take a whole extraction down, so broad excepts are the design. Each one is
+    # paired with a log line and a recorded outcome in the extraction report.
+    "BLE001",
+    # Bare `except: pass` is flagged, but the surviving cases are best-effort
+    # parses where the fallback is the point.
+    "S110",
+    # FastAPI's Depends/File/Query are function calls in defaults by design.
+    "B008",
+    # En dashes, curly quotes and hyphen bullets appear in string literals on
+    # purpose: normalizer.py exists to map exactly those characters out of real
+    # resumes, and the prompts quote them so the model recognises them. Flagging
+    # them as "ambiguous" is backwards here.
+    "RUF001",
+]
+
+[lint.per-file-ignores]
+# Tests assert against fixtures and re-raise deliberately.
+"tests/*" = ["B011", "S101"]
+
+[lint.isort]
+known-first-party = ["agents", "config"]
