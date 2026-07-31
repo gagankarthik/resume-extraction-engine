@@ -50,8 +50,10 @@ class PersonalInfoAgent(BaseAgent):
 
     async def run(self, text: str) -> dict:
         user_msg = f"=== RESUME ===\n{text}\n=== END ===\n\nExtract personal information, professional summary, and objective. Return JSON."
-        raw, _ = await self._call_llm(PERSONAL_SYSTEM, user_msg, max_tokens=3072)
-        result = self._parse_json(raw)
+        result = await self._call_llm_json(
+            PERSONAL_SYSTEM, user_msg, max_tokens=3072,
+            section="Personal information",
+        )
         if isinstance(result, list):
             return {"personal_information": result[0] if result else {}}
         # Normalise: if LLM returned bare personal_information dict without the wrapper

@@ -16,6 +16,7 @@ from validator import validate_resume_json
 from orchestrator import get_orchestrator
 from agents.auditor import ground_check
 from agents.base import reset_token_usage, get_token_usage
+from agents.report import reset_report
 
 logger = logging.getLogger(__name__)
 
@@ -515,6 +516,7 @@ async def process_resume(
     if use_orchestrator:
         orchestrator = get_orchestrator()
         usage_acc = reset_token_usage()
+        reset_report()
         try:
             extracted = await asyncio.wait_for(orchestrator.run(raw_text), timeout=timeout_secs)
         except asyncio.TimeoutError:
@@ -565,9 +567,10 @@ async def process_resume(
         except Exception as exc:
             logger.warning("[process_resume] Single-shot ground_check failed: %s", exc)
 
-    # The audit report travels under _metadata so it reaches the UI without
-    # polluting the resume schema itself.
+    # The audit and run reports travel under _metadata so they reach the UI
+    # without polluting the resume schema itself.
     audit_report = extracted.pop("_audit", None) if isinstance(extracted, dict) else None
+    run_report = extracted.pop("_extraction_report", None) if isinstance(extracted, dict) else None
 
     extracted["_metadata"] = {
         "request_id":        request_id,
@@ -592,5 +595,7 @@ async def process_resume(
         meta["audit"] = audit_report
     if warnings:
         meta["validation_warnings"] = warnings
+    if run_report:
+        meta["extraction_report"] = run_report
 
     return cleaned

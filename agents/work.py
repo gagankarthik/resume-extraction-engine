@@ -225,8 +225,10 @@ class WorkExperienceAgent(BaseAgent):
             "Return ONLY the JSON for this single job entry."
         )
 
-        raw, _ = await self._call_llm(system, user_msg, max_tokens=6144)
-        result = self._parse_json(raw)
+        result = await self._call_llm_json(
+            system, user_msg, max_tokens=6144,
+            section="Work experience",
+        )
 
         # Handle bare JSON array (LLM skipped the wrapper object)
         if isinstance(result, list):
@@ -251,8 +253,10 @@ class WorkExperienceAgent(BaseAgent):
     async def _extract_full_document(self, text: str) -> list[dict]:
         logger.info("[WorkExperienceAgent] No structure map — falling back to full-document extraction")
         user_msg = f"=== RESUME TEXT ===\n{text}\n=== END ===\n\nExtract all work experience. Return only JSON."
-        raw, _ = await self._call_llm(WORK_SYSTEM_FULL_FALLBACK, user_msg, max_tokens=16384)
-        result = self._parse_json(raw)
+        result = await self._call_llm_json(
+            WORK_SYSTEM_FULL_FALLBACK, user_msg, max_tokens=16384,
+            section="Work experience",
+        )
         if isinstance(result, list):
             return result
         return result.get("work_experience", [])

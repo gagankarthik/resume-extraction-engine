@@ -71,8 +71,10 @@ class StructureAgent(BaseAgent):
         """
         user_msg = f"=== RESUME TEXT ===\n{text}\n=== END ==="
         try:
-            raw, _ = await self._call_llm(STRUCTURE_SYSTEM, user_msg, max_tokens=8192)
-            result = self._parse_json(raw)
+            result = await self._call_llm_json(
+                STRUCTURE_SYSTEM, user_msg, max_tokens=8192,
+                section="Document structure",
+            )
             jobs = result.get("jobs", [])
         except Exception as exc:
             logger.warning("[StructureAgent] LLM failed to parse structure: %s — using empty job list", exc)

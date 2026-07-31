@@ -54,8 +54,10 @@ class SkillsAgent(BaseAgent):
 
     async def run(self, text: str) -> dict:
         user_msg = f"=== RESUME ===\n{text}\n=== END ===\n\nExtract all skills. Return JSON."
-        raw, _ = await self._call_llm(SKILLS_SYSTEM, user_msg, max_tokens=6144)
-        result = self._parse_json(raw)
+        result = await self._call_llm_json(
+            SKILLS_SYSTEM, user_msg, max_tokens=6144,
+            section="Skills",
+        )
         if isinstance(result, list):
             return {}
         return result.get("skills", result)

@@ -397,8 +397,10 @@ class CompletenessAuditorAgent(BaseAgent):
             + "\n=== END MISSED LINES ===\n\n"
             "Classify the missed content. Return JSON."
         )
-        raw, _ = await self._call_llm(RECOVERY_SYSTEM, user_msg, max_tokens=6144)
-        result = self._parse_json(raw)
+        result = await self._call_llm_json(
+            RECOVERY_SYSTEM, user_msg, max_tokens=6144,
+            section="Content recovery",
+        )
         if isinstance(result, dict):
             return result.get("recovered", result)
         return {}

@@ -37,8 +37,10 @@ class EducationAgent(BaseAgent):
 
     async def run(self, text: str) -> list[dict]:
         user_msg = f"=== RESUME ===\n{text}\n=== END ===\n\nExtract education. Return JSON."
-        raw, _ = await self._call_llm(EDUCATION_SYSTEM, user_msg, max_tokens=3072)
-        result = self._parse_json(raw)
+        result = await self._call_llm_json(
+            EDUCATION_SYSTEM, user_msg, max_tokens=3072,
+            section="Education",
+        )
         if isinstance(result, list):
             return result
         return result.get("education", [])

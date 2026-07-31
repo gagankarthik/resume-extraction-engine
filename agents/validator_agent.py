@@ -141,8 +141,10 @@ class ValidatorAgent(BaseAgent):
             f"{segment}\n"
             "=== END ==="
         )
-        raw, _ = await self._call_llm(system, user_msg, max_tokens=6144)
-        result = self._parse_json(raw)
+        result = await self._call_llm_json(
+            system, user_msg, max_tokens=6144,
+            section="Validation",
+        )
 
         # Unwrap if needed
         if "work_experience" in result and isinstance(result["work_experience"], list):

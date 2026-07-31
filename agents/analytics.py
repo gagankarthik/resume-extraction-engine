@@ -140,8 +140,10 @@ class AnalyticsAgent(BaseAgent):
         )
         user_msg = f"WORK EXPERIENCE:\n{work_summary}\n\nEDUCATION:\n{edu_summary}"
         try:
-            raw, _ = await self._call_llm(ANALYTICS_SYSTEM, user_msg, max_tokens=1024)
-            return self._parse_json(raw)
+            return await self._call_llm_json(
+                ANALYTICS_SYSTEM, user_msg, max_tokens=1024,
+                section="Analytics",
+            )
         except Exception as exc:
             logger.warning("[AnalyticsAgent] Classification failed: %s", exc)
             return {}

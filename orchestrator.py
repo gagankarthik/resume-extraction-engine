@@ -15,6 +15,7 @@ import asyncio
 import logging
 from typing import Any
 
+from agents import report
 from agents.structure import StructureAgent
 from agents.personal import PersonalInfoAgent
 from agents.work import WorkExperienceAgent
@@ -29,10 +30,35 @@ from agents.auditor import CompletenessAuditorAgent
 logger = logging.getLogger(__name__)
 
 
+# Agent class name -> the name the user sees when a section did not come through.
+_SECTION_LABELS = {
+    "PersonalInfoAgent":    "Personal information",
+    "WorkExperienceAgent":  "Work experience",
+    "EducationAgent":       "Education",
+    "SkillsAgent":          "Skills",
+    "CertificationsAgent":  "Certifications",
+    "SupplementalAgent":    "Additional sections",
+}
+
+
 def _unwrap(result: Any, default: Any, agent_name: str) -> Any:
-    """Return default and log a warning if result is an Exception."""
+    """
+    Return the agent's result, or the default if it raised.
+
+    A failure here is recorded rather than only logged. An empty section in the
+    response is otherwise indistinguishable from a section the resume never had,
+    and the person reviewing the output is the one who needs to know which it is.
+    """
     if isinstance(result, Exception):
         logger.warning("[Orchestrator] %s failed: %s", agent_name, result)
+        report.record(
+            _SECTION_LABELS.get(agent_name, agent_name),
+            report.Status.FAILED,
+            detail=(
+                "This section could not be extracted, so it is empty here even "
+                "if the resume has one. Add it by hand, or run the file again."
+            ),
+        )
         return default
     return result
 
@@ -133,12 +159,20 @@ class ResumeOrchestrator:
         except Exception as exc:
             logger.warning("[Orchestrator] Completeness audit failed: %s", exc)
 
+        # ── Attach the run report ─────────────────────────────────────────
+        # Travels under a private key so it survives into _metadata without
+        # becoming part of the resume schema itself.
+        run_report = report.get_report()
+        if run_report is not None:
+            merged["_extraction_report"] = run_report.to_dict()
+
         # Final sanity log
         we = merged.get("work_experience", [])
         logger.info(
-            "[Orchestrator] Final result: %d job(s), summary=%s",
+            "[Orchestrator] Final result: %d job(s), summary=%s, degraded=%s",
             len(we),
             "present" if merged.get("professional_summary") else "absent",
+            run_report.degraded if run_report else "unknown",
         )
 
         return merged

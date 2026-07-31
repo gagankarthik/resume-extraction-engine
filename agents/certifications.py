@@ -22,8 +22,10 @@ class CertificationsAgent(BaseAgent):
 
     async def run(self, text: str) -> list[dict]:
         user_msg = f"=== RESUME ===\n{text}\n=== END ===\n\nExtract certifications. Return JSON."
-        raw, _ = await self._call_llm(CERT_SYSTEM, user_msg, max_tokens=2048)
-        result = self._parse_json(raw)
+        result = await self._call_llm_json(
+            CERT_SYSTEM, user_msg, max_tokens=2048,
+            section="Certifications",
+        )
         if isinstance(result, list):
             return result
         return result.get("certifications", [])
