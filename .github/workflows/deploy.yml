@@ -97,6 +97,10 @@ jobs:
           TF_VAR_anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           TF_VAR_anthropic_model:   ${{ secrets.ANTHROPIC_MODEL }}
           TF_VAR_use_orchestrator:  ${{ secrets.USE_ORCHESTRATOR }}
+          # No default in variables.tf, deliberately: an empty secret here makes
+          # the engine refuse every upload rather than accept anonymous ones.
+          # Must equal NEXT_EXTRACTION_SHARED_SECRET in the Amplify console.
+          TF_VAR_extraction_shared_secret: ${{ secrets.EXTRACTION_SHARED_SECRET }}
 
       - name: Terraform Apply
         run: terraform apply -auto-approve tfplan
@@ -107,6 +111,10 @@ jobs:
           TF_VAR_anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           TF_VAR_anthropic_model:   ${{ secrets.ANTHROPIC_MODEL }}
           TF_VAR_use_orchestrator:  ${{ secrets.USE_ORCHESTRATOR }}
+          # No default in variables.tf, deliberately: an empty secret here makes
+          # the engine refuse every upload rather than accept anonymous ones.
+          # Must equal NEXT_EXTRACTION_SHARED_SECRET in the Amplify console.
+          TF_VAR_extraction_shared_secret: ${{ secrets.EXTRACTION_SHARED_SECRET }}
 
       - name: Print Function URL
         run: terraform output function_url
