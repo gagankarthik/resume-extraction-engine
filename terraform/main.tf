@@ -142,7 +142,10 @@ resource "aws_lambda_function_url" "api" {
     allow_credentials = false
     # Was ["*"], which let any page on the internet spend the OpenAI budget.
     allow_origins = var.allowed_origins
-    allow_methods = ["POST", "OPTIONS"]
+    # POST only. "OPTIONS" is rejected by the API — each allowMethods member is
+    # capped at six characters, and preflight is answered by the Function URL
+    # itself, so listing it is both invalid and unnecessary.
+    allow_methods = ["POST"]
     allow_headers = ["content-type", "x-extraction-token"]
     max_age       = 86400
   }
