@@ -49,12 +49,21 @@ ALLOWED_ORIGINS = [
     if origin.strip()
 ]
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,
-    allow_methods=["POST", "OPTIONS"],
-    allow_headers=["Content-Type", TOKEN_HEADER],
-)
+# Only one layer may answer CORS. Under a Function URL both were: the URL added
+# Access-Control-Allow-Origin and this middleware added it again, so the browser
+# saw the header twice ("contains multiple values '<origin>, <origin>'") and
+# failed every upload — a duplicate is rejected even when both copies agree.
+# AWS_LAMBDA_FUNCTION_NAME is set by the runtime, so it marks the deployed case;
+# a local uvicorn run has no Function URL in front of it and still needs this.
+IN_LAMBDA = bool(os.getenv("AWS_LAMBDA_FUNCTION_NAME"))
+
+if not IN_LAMBDA:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=ALLOWED_ORIGINS,
+        allow_methods=["POST", "OPTIONS"],
+        allow_headers=["Content-Type", TOKEN_HEADER],
+    )
 
 MAX_FILE_BYTES = int(os.getenv("MAX_FILE_SIZE_MB", "20")) * 1024 * 1024
 MAX_FILE_MB = MAX_FILE_BYTES // (1024 * 1024)
