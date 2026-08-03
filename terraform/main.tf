@@ -109,6 +109,13 @@ resource "aws_lambda_function" "api" {
       USE_ORCHESTRATOR  = var.use_orchestrator
       MAX_FILE_SIZE_MB  = "20"
 
+      # The pipeline's own limit, which defaults to 360s and was never set here.
+      # A dense 2,700-word resume measured 624s on an otherwise idle machine, so
+      # the default failed real files while the function it runs in was allowed
+      # 900. Kept under the Lambda timeout so the pipeline gives up first and
+      # returns an explanation, rather than the runtime killing it mid-flight.
+      EXTRACTION_TIMEOUT_SECONDS = "840"
+
       # Uploads are refused without this. It is the only thing between a public
       # Function URL and an open ten-agent GPT pipeline — see auth.py.
       EXTRACTION_SHARED_SECRET = var.extraction_shared_secret
