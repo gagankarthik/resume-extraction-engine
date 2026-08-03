@@ -1,15 +1,16 @@
 import asyncio
 import logging
 import os
-import traceback
 from pathlib import Path
 
 import uvicorn
 from dotenv import load_dotenv
-from fastapi import FastAPI, File, HTTPException, Query, UploadFile
+from fastapi import Depends, FastAPI, File, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+import filetypes
+from auth import TOKEN_HEADER, require_upload_token
 from extractor import extract_text
 from processor import process_resume
 
@@ -22,59 +23,58 @@ logging.basicConfig(
     format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
 )
 
+logger = logging.getLogger(__name__)
+
 app = FastAPI(
-    title="Resume Extraction Engine",
+    title="Resume Extraction Engine — Resume State Format Tool",
     description=(
+        "Resume extraction service for the Resume State Format Tool. "
         "Upload any resume (PDF, DOCX, DOC, or TXT) "
         "and receive a fully structured JSON with every detail extracted."
     ),
     version="2.0.0",
 )
 
-# CORS for browser-based callers (Next.js dev server, deployed frontend).
-# The Lambda Function URL has its own CORS config in Terraform; this is for
-# when the frontend points at a local `uvicorn main:app` server.
+# CORS for browser-based callers. The browser posts resumes here directly —
+# see auth.py for why — so these origins are the real gate on who may call the
+# engine from a page, alongside the upload token.
+#
+# The Lambda Function URL has its own CORS config in Terraform, and that is the
+# one that applies in production; this middleware covers a local
+# `uvicorn main:app` run. Keep the two lists saying the same thing.
+_DEFAULT_ORIGINS = "http://localhost:3000,http://127.0.0.1:3000,https://hire.oceanbluecorp.com"
+ALLOWED_ORIGINS = [
+    origin.strip()
+    for origin in os.getenv("ALLOWED_ORIGINS", _DEFAULT_ORIGINS).split(",")
+    if origin.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://10.0.0.47:3000"],
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=ALLOWED_ORIGINS,
+    allow_methods=["POST", "OPTIONS"],
+    allow_headers=["Content-Type", TOKEN_HEADER],
 )
 
 MAX_FILE_BYTES = int(os.getenv("MAX_FILE_SIZE_MB", "20")) * 1024 * 1024
-
-# Maps MIME type → internal file_type string for the extractor
-MIME_TO_TYPE: dict[str, str] = {
-    "application/pdf": "pdf",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "docx",
-    "application/msword": "doc",
-    "text/plain": "txt",
-}
-
-# Extension fallback when MIME is missing/wrong
-EXT_TO_TYPE: dict[str, str] = {
-    "pdf": "pdf",
-    "docx": "docx",
-    "doc": "doc",
-    "txt": "txt",
-}
-
-SUPPORTED_DISPLAY = ["PDF", "DOCX", "DOC", "TXT"]
+MAX_FILE_MB = MAX_FILE_BYTES // (1024 * 1024)
 
 
 @app.get("/")
 async def root():
     return {
         "service": "Resume Extraction Engine",
+        "belongs_to": "Resume State Format Tool",
+        "description": "Resume extraction for the Resume State Format Tool — not a general-purpose endpoint.",
         "version": "2.0.0",
         "provider": os.getenv("MODEL_PROVIDER", "openai"),
         "model": os.getenv("OPENAI_MODEL", "gpt-4.1-mini")
                  if os.getenv("MODEL_PROVIDER", "openai") == "openai"
                  else os.getenv("ANTHROPIC_MODEL", "claude-opus-4-8"),
-        "supported_formats":  SUPPORTED_DISPLAY,
-        "max_file_size_mb": MAX_FILE_BYTES // (1024 * 1024),
+        "supported_formats":  filetypes.SUPPORTED_DISPLAY,
+        "max_file_size_mb": MAX_FILE_MB,
         "endpoints": {
-            "POST /extract": "Upload a resume — returns complete structured JSON",
+            "POST /extract": f"Upload a resume — returns complete structured JSON. Requires a {TOKEN_HEADER} ticket.",
             "GET  /health":  "Health check",
         },
     }
@@ -90,35 +90,43 @@ async def extract_resume(
     file: UploadFile = File(...),
     client_id: str | None = Query(default=None, description="Optional client identifier for multi-tenant tracking"),
     project_id: str | None = Query(default=None, description="Optional project identifier for grouping extractions"),
+    claims: dict | None = Depends(require_upload_token),
 ):
-    # --- Resolve file type ---
-    content_type = (file.content_type or "").split(";")[0].strip()
-    file_type = MIME_TO_TYPE.get(content_type)
+    # The upload ticket is verified before a byte is read: this route runs a
+    # ten-agent LLM pipeline, so an unauthorised call costs real money.
+    if claims:
+        logger.info("[extract] authorised upload for sub=%s", claims.get("sub", "unknown"))
 
-    if file_type is None:
-        # Try to infer from file extension
-        ext = (file.filename or "").rsplit(".", 1)[-1].lower() if file.filename else ""
-        file_type = EXT_TO_TYPE.get(ext)
+    # --- Read the file ---
+    # The bytes have to be in hand before the format can be decided: what a
+    # file *is* is settled by its first bytes, not by the name or the
+    # Content-Type the browser guessed. See filetypes.resolve.
+    file_bytes = await file.read()
+    name = file.filename or "the file"
 
-    if file_type is None:
+    if len(file_bytes) == 0:
         raise HTTPException(
             status_code=400,
+            detail=f"“{name}” is empty — it contains no data. Check the file and upload it again.",
+        )
+
+    if len(file_bytes) > MAX_FILE_BYTES:
+        actual_mb = len(file_bytes) / (1024 * 1024)
+        raise HTTPException(
+            status_code=413,
             detail=(
-                f"Unsupported file type '{content_type}'. "
-                f"Accepted formats: {', '.join(SUPPORTED_DISPLAY)}"
+                f"“{name}” is {actual_mb:.1f} MB, over the {MAX_FILE_MB} MB limit. "
+                f"Resumes are almost always well under this — if yours is large, it "
+                f"probably contains images; export it to PDF again without them."
             ),
         )
 
-    # --- Read file ---
-    file_bytes = await file.read()
-
-    if len(file_bytes) == 0:
-        raise HTTPException(status_code=400, detail="Uploaded file is empty.")
-
-    if len(file_bytes) > MAX_FILE_BYTES:
+    # --- Decide what it is ---
+    kind = filetypes.resolve(file.content_type, file.filename, file_bytes)
+    if kind is None:
         raise HTTPException(
-            status_code=413,
-            detail=f"File too large. Maximum size is {MAX_FILE_BYTES // (1024 * 1024)} MB.",
+            status_code=415,
+            detail=filetypes.unsupported_message(file.filename, file.content_type),
         )
 
     # --- Extract text ---
@@ -126,23 +134,33 @@ async def extract_resume(
     # thread so it doesn't block the event loop and stall concurrent uploads.
     try:
         raw_text, page_count, extraction_info = await asyncio.to_thread(
-            extract_text, file_bytes, file_type
+            extract_text, file_bytes, kind.key
         )
     except RuntimeError as exc:
-        # Unreadable file: scanned/image-only PDF, legacy .doc, corrupt archive, etc.
+        # Unreadable file: scanned PDF, legacy .doc, corrupt archive. These
+        # messages are written for the person uploading and pass through as-is.
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except Exception as exc:
-        traceback.print_exc()
-        raise HTTPException(status_code=422, detail=f"Text extraction failed: {exc}") from exc
+        # Anything else is a fault in this service, not in their file. Log the
+        # detail; do not hand an internal traceback string to the caller.
+        logger.exception("[extract] unhandled failure reading a %s file", kind.label)
+        raise HTTPException(
+            status_code=500,
+            detail=(
+                f"Something went wrong reading “{name}”. This is a fault on our side, "
+                f"not with the file. Please try again."
+            ),
+        ) from exc
 
     if not raw_text.strip():
         raise HTTPException(
             status_code=422,
             detail=(
-                "No readable text found. This looks like a scanned or image-only "
-                "document — OCR is not supported. Please upload a text-based PDF, "
-                "DOCX, or TXT (e.g. export the original to a text PDF), and ensure "
-                "the file is not password-protected."
+                f"No readable text was found in “{name}”. This usually means the "
+                f"resume is a scan or a picture of a document — the text has to be "
+                f"selectable, not photographed. Upload the original, or export it to "
+                f"PDF from the app that made it. A password-protected file will also "
+                f"land here."
             ),
         )
 
@@ -151,7 +169,7 @@ async def extract_resume(
         result = await process_resume(
             raw_text=raw_text,
             file_name=file.filename or "resume",
-            file_type=file_type,
+            file_type=kind.key,
             page_count=page_count,
             extraction_info=extraction_info,
             client_id=client_id,

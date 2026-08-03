@@ -3,6 +3,10 @@ Resume text extraction — no OCR dependency.
   PDF  → pdfplumber (layout-aware, table-aware, repeated-header removal)
   DOCX → python-docx (paragraphs + tables + headers/footers in doc order)
            fallback: raw ZIP extraction of word/document.xml
+  RTF  → striprtf (control words stripped, escapes and unicode decoded)
+  DOC  → not parseable; explains how to convert. Files that merely *claim*
+         .doc are usually RTF or DOCX and are routed by their real bytes,
+         so this message is reached only by genuine OLE2 documents.
   TXT  → UTF-8 decode
 All paths run through normalizer.py before returning.
 """
@@ -15,6 +19,7 @@ from docx import Document
 from docx.oxml.ns import qn
 from docx.table import Table as DocxTable
 from docx.text.paragraph import Paragraph as DocxParagraph
+from striprtf.striprtf import rtf_to_text
 
 from normalizer import deduplicate_page_content, normalize_text
 
@@ -32,16 +37,16 @@ def extract_text(file_bytes: bytes, file_type: str) -> ExtractionResult:
     """
     Returns (normalized_text, page_count, extraction_info).
     Raises ValueError for unsupported types.
-    Raises RuntimeError for unreadable files.
+    Raises RuntimeError for unreadable files, with a message meant for the
+    person who uploaded them.
+
+    `file_type` is filetypes.resolve()'s verdict — decided from the file's own
+    bytes, not its name — so each branch here can trust what it is given.
     """
-    ft = file_type.lower()
-    if ft == "pdf":
-        return _extract_pdf(file_bytes)
-    if ft in ("docx", "doc"):
-        return _extract_docx(file_bytes)
-    if ft == "txt":
-        return _extract_txt(file_bytes)
-    raise ValueError(f"Unsupported file type: {file_type!r}")
+    handler = _HANDLERS.get(file_type.lower())
+    if handler is None:
+        raise ValueError(f"Unsupported file type: {file_type!r}")
+    return handler(file_bytes)
 
 
 # ------------------------------------------------------------------ #
@@ -52,13 +57,26 @@ def _extract_pdf(file_bytes: bytes) -> ExtractionResult:
     page_texts: list[str | None] = []
     sparse_pages: list[int] = []
 
-    with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
-        page_count = len(pdf.pages)
-        for i, page in enumerate(pdf.pages, start=1):
-            text = _extract_one_pdf_page(page)
-            if len(text.strip()) < _SPARSE_THRESHOLD:
-                sparse_pages.append(i)
-            page_texts.append(text or None)
+    try:
+        with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
+            page_count = len(pdf.pages)
+            for i, page in enumerate(pdf.pages, start=1):
+                text = _extract_one_pdf_page(page)
+                if len(text.strip()) < _SPARSE_THRESHOLD:
+                    sparse_pages.append(i)
+                page_texts.append(text or None)
+    except Exception as exc:
+        # A damaged or encrypted PDF is the uploader's problem to fix, not a
+        # fault in this service — say which, and what to do, rather than 500.
+        if "password" in str(exc).lower() or "encrypt" in str(exc).lower():
+            raise RuntimeError(
+                "This PDF is password-protected, so its text cannot be read. "
+                "Remove the password, or export an unprotected copy, and upload that."
+            ) from exc
+        raise RuntimeError(
+            "This PDF could not be opened — the file looks damaged or incomplete. "
+            "Try re-downloading it, or open it and export a fresh PDF."
+        ) from exc
 
     if sparse_pages and all(t is None or len(t.strip()) < _SPARSE_THRESHOLD for t in page_texts):
         raise RuntimeError(
@@ -117,14 +135,31 @@ def _extract_one_pdf_page(page) -> str:
 # instead of letting python-docx + the ZIP fallback both throw opaque errors.
 _OLE2_MAGIC = b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1"
 
+# Reading OLE2 needs a Word-format parser (antiword, LibreOffice) that cannot be
+# shipped in a Lambda zip. Saying exactly which conversions work is the whole
+# value of this message — "unsupported" alone leaves someone stuck.
+_LEGACY_DOC_MESSAGE = (
+    "This is a legacy Word document (.doc), a format from before 2007 that this "
+    "tool cannot read. Open it in Word or Google Docs and use “Save as” to make "
+    "a .docx, or export it to PDF — either will upload fine."
+)
+
+
+def _extract_doc(file_bytes: bytes) -> ExtractionResult:
+    """
+    Genuine OLE2 .doc.
+
+    Most uploads named .doc never reach here: filetypes.resolve() reads their
+    bytes first, and a "resume.doc" that is really RTF or DOCX is routed to the
+    parser that can read it. What is left is the real thing, which cannot be.
+    """
+    raise RuntimeError(_LEGACY_DOC_MESSAGE)
+
 
 def _extract_docx(file_bytes: bytes) -> ExtractionResult:
+    # Defence in depth: routing should have sent this to _extract_doc already.
     if file_bytes[:8] == _OLE2_MAGIC:
-        raise RuntimeError(
-            "This is a legacy binary Word document (.doc), which is not supported. "
-            "Please open it in Microsoft Word and save as .docx, or export to PDF, "
-            "then re-upload."
-        )
+        raise RuntimeError(_LEGACY_DOC_MESSAGE)
 
     try:
         doc = Document(io.BytesIO(file_bytes))
@@ -254,5 +289,68 @@ def _is_list_paragraph(para: DocxParagraph) -> bool:
 # ------------------------------------------------------------------ #
 
 def _extract_txt(file_bytes: bytes) -> ExtractionResult:
-    text = file_bytes.decode("utf-8", errors="replace")
+    text = _decode_text(file_bytes)
     return normalize_text(text), 1, {"method": "txt"}
+
+
+def _decode_text(file_bytes: bytes) -> str:
+    """
+    Decode bytes that are meant to be text.
+
+    Resumes routinely arrive as Windows-1252 from Word or Notepad — smart
+    quotes, em dashes and accented names are exactly the bytes UTF-8 rejects.
+    Falling straight to errors="replace" would pepper those names with U+FFFD,
+    so try the encodings that actually occur before giving up on any character.
+    """
+    for encoding in ("utf-8-sig", "utf-8", "cp1252", "latin-1"):
+        try:
+            return file_bytes.decode(encoding)
+        except UnicodeDecodeError:
+            continue
+    return file_bytes.decode("utf-8", errors="replace")
+
+
+# ------------------------------------------------------------------ #
+# RTF
+# ------------------------------------------------------------------ #
+
+def _extract_rtf(file_bytes: bytes) -> ExtractionResult:
+    """
+    RTF is text with markup, so it decodes before it parses.
+
+    striprtf drops control words, skips destination groups such as font and
+    colour tables, and turns \\'xx and \\uN escapes back into characters —
+    including the \\bullet that list items are built from, which downstream
+    bullet counting depends on.
+    """
+    try:
+        text = rtf_to_text(_decode_text(file_bytes), errors="ignore")
+    except Exception as exc:
+        raise RuntimeError(
+            "This RTF file could not be read — it may be damaged. Try opening it "
+            "in Word or TextEdit and saving it again as .docx or PDF."
+        ) from exc
+
+    if not text.strip():
+        raise RuntimeError(
+            "This RTF file contains no readable text. If the resume is a picture "
+            "pasted into the document, upload the original instead — text has to "
+            "be selectable, not pictured."
+        )
+
+    return normalize_text(text), 1, {"method": "striprtf"}
+
+
+# ------------------------------------------------------------------ #
+# Dispatch
+# ------------------------------------------------------------------ #
+# Keys are FileKind.key values from filetypes.py. Adding a format means adding
+# a FileKind there and one entry here; nothing else in the service changes.
+
+_HANDLERS = {
+    "pdf": _extract_pdf,
+    "docx": _extract_docx,
+    "doc": _extract_doc,
+    "rtf": _extract_rtf,
+    "txt": _extract_txt,
+}

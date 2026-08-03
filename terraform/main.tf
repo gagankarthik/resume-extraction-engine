@@ -88,10 +88,12 @@ resource "aws_s3_object" "zip" {
 resource "aws_lambda_function" "api" {
   function_name = "resume-extraction-engine"
   role          = aws_iam_role.lambda.arn
-  handler       = "handler.handler"
-  runtime       = "python3.11"
-  timeout       = 900   # 15 min — multi-agent LLM pipeline takes 30-90s
-  memory_size   = 1024
+  # Shown in the Lambda console list, where several functions look alike.
+  description = "Resume extraction engine — State Format Tool (multi-agent LLM pipeline). Called by the frontend at hire.oceanbluecorp.com."
+  handler     = "handler.handler"
+  runtime     = "python3.11"
+  timeout     = 900 # 15 min — multi-agent LLM pipeline takes 30-90s
+  memory_size = 1024
 
   s3_bucket        = aws_s3_bucket.packages.id
   s3_key           = aws_s3_object.zip.key
@@ -106,6 +108,14 @@ resource "aws_lambda_function" "api" {
       ANTHROPIC_MODEL   = var.anthropic_model
       USE_ORCHESTRATOR  = var.use_orchestrator
       MAX_FILE_SIZE_MB  = "20"
+
+      # Uploads are refused without this. It is the only thing between a public
+      # Function URL and an open ten-agent GPT pipeline — see auth.py.
+      EXTRACTION_SHARED_SECRET = var.extraction_shared_secret
+
+      # Mirrors the Function URL cors block below, so a local or non-Function-URL
+      # run of the same image enforces the same origins.
+      ALLOWED_ORIGINS = join(",", var.allowed_origins)
     }
   }
 
@@ -113,6 +123,16 @@ resource "aws_lambda_function" "api" {
 }
 
 # ── Function URL (no API Gateway — avoids the 29s timeout limit) ─────────────
+#
+# The browser posts resumes straight here. Anything that proxies this call —
+# API Gateway at 29s, or Amplify's CloudFront at 30s — cuts off a pipeline that
+# legitimately runs 30-90s and returns a 504, so the long-lived Function URL is
+# the point rather than an optimisation.
+#
+# authorization_type stays NONE because a browser cannot SigV4-sign an upload.
+# That makes AWS's layer wide open by design, and moves the whole burden of
+# authorisation onto the app: the X-Extraction-Token check in auth.py, plus the
+# origin allowlist below. Neither is optional.
 
 resource "aws_lambda_function_url" "api" {
   function_name      = aws_lambda_function.api.function_name
@@ -120,10 +140,11 @@ resource "aws_lambda_function_url" "api" {
 
   cors {
     allow_credentials = false
-    allow_origins     = ["*"]
-    allow_methods     = ["*"]
-    allow_headers     = ["*"]
-    max_age           = 86400
+    # Was ["*"], which let any page on the internet spend the OpenAI budget.
+    allow_origins = var.allowed_origins
+    allow_methods = ["POST", "OPTIONS"]
+    allow_headers = ["content-type", "x-extraction-token"]
+    max_age       = 86400
   }
 }
 
