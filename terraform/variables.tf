@@ -56,7 +56,16 @@ variable "allowed_origins" {
     straight from the page to the Function URL, so this is a real access
     control and not a formality — it was ["*"].
 
+    Every hostname that serves the frontend has to be listed, or uploads from
+    the ones left out fail preflight. Amplify serves this app from three: the
+    custom domain, its www subdomain, and the branch's default amplifyapp.com
+    address, which stays reachable whether or not anyone means to use it.
+
     Scheme + host + port, no trailing slash.
   EOT
-  default     = ["https://hire.oceanbluecorp.com"]
+  default = [
+    "https://hire.oceanbluecorp.com",
+    "https://www.hire.oceanbluecorp.com",
+    "https://master.dh8jqvx96jdpd.amplifyapp.com",
+  ]
 }
