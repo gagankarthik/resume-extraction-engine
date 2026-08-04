@@ -105,7 +105,6 @@ class PersonalInformationModel(_Base):
     nationality: Optional[str] = None
     gender: Optional[str] = None
     marital_status: Optional[str] = None
-    profile_headline: Optional[str] = None
 
     @model_validator(mode="before")
     @classmethod
@@ -268,7 +267,6 @@ class SkillsModel(_Base):
     methodologies: list[str] = Field(default_factory=list)
     domain_skills: list[str] = Field(default_factory=list)
     design_skills: list[str] = Field(default_factory=list)
-    languages_spoken: list[str] = Field(default_factory=list)
     other_skills: list[str] = Field(default_factory=list)
     # Verbatim categories preserve the resume's own section labels.
     # Frontend prefers these over the normalized fields above when populated.
@@ -346,104 +344,11 @@ class ProjectItem(_Base):
         return out
 
 
-# ---------------------------------------------------------------------------
-# publications
-# ---------------------------------------------------------------------------
-
-class PublicationItem(_Base):
-    title: Optional[str] = None
-    authors: list[str] = Field(default_factory=list)
-    publisher: Optional[str] = None
-    journal: Optional[str] = None
-    conference: Optional[str] = None
-    date: Optional[str] = None
-    url: Optional[str] = None
-    doi: Optional[str] = None
-    isbn: Optional[str] = None
-    description: Optional[str] = None
-    type: Optional[str] = None
-
-    @model_validator(mode="before")
-    @classmethod
-    def _coerce(cls, d: Any) -> Any:
-        if not isinstance(d, dict):
-            return {}
-        out: dict[str, Any] = {}
-        for k, v in d.items():
-            if k == "authors":
-                out[k] = _str_list(v)
-            else:
-                out[k] = _str(v)
-        return out
-
-
-# ---------------------------------------------------------------------------
-# awards_and_honors
-# ---------------------------------------------------------------------------
-
-class AwardItem(_Base):
-    title: Optional[str] = None
-    issuer: Optional[str] = None
-    date: Optional[str] = None
-    description: Optional[str] = None
-    level: Optional[str] = None
-
-    @model_validator(mode="before")
-    @classmethod
-    def _coerce(cls, d: Any) -> Any:
-        if not isinstance(d, dict):
-            return {}
-        return {k: _str(v) for k, v in d.items()}
-
-
-# ---------------------------------------------------------------------------
-# volunteer_experience
-# ---------------------------------------------------------------------------
-
-class VolunteerItem(_Base):
-    organization: Optional[str] = None
-    role: Optional[str] = None
-    start_date: Optional[str] = None
-    end_date: Optional[str] = None
-    is_current: Optional[bool] = None
-    location: Optional[str] = None
-    description: Optional[str] = None
-    responsibilities: list[str] = Field(default_factory=list)
-    cause: Optional[str] = None
-
-    @model_validator(mode="before")
-    @classmethod
-    def _coerce(cls, d: Any) -> Any:
-        if not isinstance(d, dict):
-            return {}
-        out: dict[str, Any] = {}
-        for k, v in d.items():
-            if k == "responsibilities":
-                out[k] = _str_list(v)
-            elif k == "is_current":
-                out[k] = _bool(v)
-            else:
-                out[k] = _str(v)
-        return out
-
-
-# ---------------------------------------------------------------------------
-# languages
-# ---------------------------------------------------------------------------
-
-class LanguageItem(_Base):
-    language: Optional[str] = None
-    proficiency: Optional[str] = None
-    reading: Optional[str] = None
-    writing: Optional[str] = None
-    speaking: Optional[str] = None
-
-    @model_validator(mode="before")
-    @classmethod
-    def _coerce(cls, d: Any) -> Any:
-        if not isinstance(d, dict):
-            return {}
-        return {k: _str(v) for k, v in d.items()}
+# Six sections are deliberately absent from this schema and are never
+# extracted: awards/honours, volunteer experience, languages, publications,
+# professional memberships, and interests/hobbies. The tool does not render
+# them, so asking the model for them only spends tokens on discarded output.
+# SupplementalAgent carries the matching prompt rule.
 
 
 # ---------------------------------------------------------------------------
@@ -495,32 +400,6 @@ class PatentItem(_Base):
         for k, v in d.items():
             if k == "inventors":
                 out[k] = _str_list(v)
-            else:
-                out[k] = _str(v)
-        return out
-
-
-# ---------------------------------------------------------------------------
-# professional_memberships
-# ---------------------------------------------------------------------------
-
-class MembershipItem(_Base):
-    organization: Optional[str] = None
-    role: Optional[str] = None
-    membership_type: Optional[str] = None
-    start_date: Optional[str] = None
-    end_date: Optional[str] = None
-    is_current: Optional[bool] = None
-
-    @model_validator(mode="before")
-    @classmethod
-    def _coerce(cls, d: Any) -> Any:
-        if not isinstance(d, dict):
-            return {}
-        out: dict[str, Any] = {}
-        for k, v in d.items():
-            if k == "is_current":
-                out[k] = _bool(v)
             else:
                 out[k] = _str(v)
         return out
@@ -610,21 +489,18 @@ class ExtracurricularItem(_Base):
 # analytics
 # ---------------------------------------------------------------------------
 
+# Only arithmetic over what the resume states. The classification fields
+# (career_level, primary_industry, secondary_industries, job_functions,
+# highest_education_level) were removed with the LLM pass that produced them —
+# they were opinions about the candidate, not content from the document.
 class AnalyticsModel(_Base):
     total_years_of_experience: Optional[float] = None
     total_months_of_experience: Optional[int] = None
-    career_level: Optional[str] = None
-    primary_industry: Optional[str] = None
-    secondary_industries: list[str] = Field(default_factory=list)
-    job_functions: list[str] = Field(default_factory=list)
-    highest_education_level: Optional[str] = None
     number_of_companies: Optional[int] = None
     number_of_roles: Optional[int] = None
     average_tenure_months: Optional[int] = None
     has_international_experience: Optional[bool] = None
     primary_location: Optional[str] = None
-    salary_mentioned: Optional[str] = None
-    resume_language: Optional[str] = None
 
     @model_validator(mode="before")
     @classmethod
@@ -633,9 +509,7 @@ class AnalyticsModel(_Base):
             return {}
         out: dict[str, Any] = {}
         for k, v in d.items():
-            if k in ("secondary_industries", "job_functions"):
-                out[k] = _str_list(v)
-            elif k == "total_years_of_experience":
+            if k == "total_years_of_experience":
                 out[k] = _float(v)
             elif k in ("total_months_of_experience", "number_of_companies",
                        "number_of_roles", "average_tenure_months"):
@@ -694,14 +568,8 @@ class ResumeSchema(_Base):
     skills: Optional[SkillsModel] = None
     certifications: list[CertificationItem] = Field(default_factory=list)
     projects: list[ProjectItem] = Field(default_factory=list)
-    publications: list[PublicationItem] = Field(default_factory=list)
-    awards_and_honors: list[AwardItem] = Field(default_factory=list)
-    volunteer_experience: list[VolunteerItem] = Field(default_factory=list)
-    languages: list[LanguageItem] = Field(default_factory=list)
-    interests_and_hobbies: list[str] = Field(default_factory=list)
     references: list[ReferenceItem] = Field(default_factory=list)
     patents: list[PatentItem] = Field(default_factory=list)
-    professional_memberships: list[MembershipItem] = Field(default_factory=list)
     conferences_and_talks: list[ConferenceItem] = Field(default_factory=list)
     courses: list[CourseItem] = Field(default_factory=list)
     training: list[TrainingItem] = Field(default_factory=list)
@@ -718,8 +586,6 @@ class ResumeSchema(_Base):
         for k, v in d.items():
             if k == "professional_summary" or k == "objective":
                 out[k] = _str(v)
-            elif k == "interests_and_hobbies":
-                out[k] = _str_list(v)
             else:
                 out[k] = v  # typed list fields and sub-models handled by Pydantic
         return out
@@ -728,6 +594,46 @@ class ResumeSchema(_Base):
 # ---------------------------------------------------------------------------
 # Public entry point
 # ---------------------------------------------------------------------------
+
+# Sections the tool does not produce. Because every model is extra="allow" —
+# deliberately, so a field the LLM invents is never silently lost — dropping a
+# field from the schema is NOT enough to keep it out of the response. A model
+# that ignores its prompt and returns "awards_and_honors" anyway would sail
+# straight through validation. These keys are removed by name, at the end, so
+# the guarantee holds no matter what came back.
+_DROPPED_SECTIONS = (
+    "awards_and_honors", "volunteer_experience", "languages",
+    "interests_and_hobbies", "publications", "professional_memberships",
+)
+
+# Judgements about the candidate rather than content from the document.
+_DROPPED_ANALYTICS = (
+    "career_level", "primary_industry", "secondary_industries",
+    "job_functions", "highest_education_level",
+)
+
+# The candidate's title/designation is entered by the recruiter, never parsed.
+_DROPPED_PERSONAL = ("profile_headline",)
+
+
+def _strip_dropped(cleaned: dict) -> None:
+    for key in _DROPPED_SECTIONS:
+        cleaned.pop(key, None)
+
+    personal = cleaned.get("personal_information")
+    if isinstance(personal, dict):
+        for key in _DROPPED_PERSONAL:
+            personal.pop(key, None)
+
+    analytics = cleaned.get("analytics")
+    if isinstance(analytics, dict):
+        for key in _DROPPED_ANALYTICS:
+            analytics.pop(key, None)
+
+    skills = cleaned.get("skills")
+    if isinstance(skills, dict):
+        skills.pop("languages_spoken", None)
+
 
 def validate_resume_json(raw: dict) -> tuple[dict, list[str]]:
     """
@@ -744,6 +650,8 @@ def validate_resume_json(raw: dict) -> tuple[dict, list[str]]:
     except Exception as exc:
         warnings.append(f"Top-level validation failed: {exc}")
         cleaned = raw
+
+    _strip_dropped(cleaned)
 
     if metadata is not None:
         cleaned["_metadata"] = metadata

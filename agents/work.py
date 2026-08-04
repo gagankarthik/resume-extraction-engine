@@ -30,7 +30,7 @@ Extract into this JSON shape:
   "responsibilities": ["bullet 1", "bullet 2", ...],
   "achievements": ["measurable outcome 1", ...],
   "technologies_used": ["tech1", "tech2", ...],
-  "description": "one brief sentence describing the role context only — NOT job duties",
+  "description": "verbatim company/role description line from the resume, or null",
   "projects": [
     {{
       "projectName": "project name",
@@ -47,14 +47,15 @@ Rules:
 - NEVER invent metrics, percentages, dollar figures, or counts. Only keep a number (e.g. "40%", "$2M", "reduced defects by 35%", "3 platform launches") if that EXACT number is written in the source segment. Do not add, estimate, round, or embellish numbers, and do not append quantified impact ("by 40%", "improving efficiency", "increasing velocity") that the source does not literally state.
 - NEVER add generic AI-style impact sentences that are not in the source (e.g. "Improved release predictability by 40%", "Reduced production defects by 35%", "Accelerated time-to-market", "Increased sprint velocity by 20%", "Delivered measurable cost optimization through license renegotiation and capacity right-sizing"). If the resume does not contain the sentence, it MUST NOT appear in the output.
 - Copy every responsibility VERBATIM — do not paraphrase, summarize, or merge. Each responsibility must be the COMPLETE sentence/bullet from the source — never truncate or cut a sentence partway.
+- ONE source bullet = ONE array item. Return EXACTLY as many items as the source has, no more. Never split a bullet into several items, never invent an extra item, and never pad a short list. If the job has a single responsibility, responsibilities[] has exactly one entry.
 - start_date / end_date: copy EXACTLY as written, INCLUDING the month when one is present (e.g. "Jan 2020", not "2020").
 - location: extract the job's city/state whenever it appears anywhere in the job header lines — do not leave it null if a location is written.
 - Strip leading bullet glyphs (•, ●, ▪, ▸, ‣, ○, ◦, ►, -, *, –, —) from each entry.
 - Bullets may be marked by ANY of these glyphs, by numbered lists (1., 1)), or by no glyph at all (prose).
-- If the job uses PROSE paragraphs (no explicit bullets): split each sentence into an individual item in responsibilities[]. Do NOT put job duties into description.
+- If the job uses PROSE paragraphs (no explicit bullets): each PARAGRAPH becomes one item in responsibilities[], copied verbatim. Do NOT sentence-split a paragraph into several items, and do NOT put job duties into description.
 - Treat ANY narrative duty/action text in the segment as bullet content — even if it isn't formatted as a bulleted list. Past-tense action verbs (Designed, Led, Built, Managed, Migrated, Implemented, …) are duty signals; capture each as its own responsibility.
 - NEVER leave responsibilities[] empty if the segment contains ANY duty/narrative text — every such job must have at least one entry. Only leave it empty if the segment is truly metadata-only (company/date/title/location/tech list with NO action sentences).
-- description should be NULL or a single short sentence describing the COMPANY/ROLE context only (e.g. "Healthcare insurer in California"). NEVER put duty bullets, action verbs, or summary sentences into description — those belong in responsibilities[].
+- description: NEVER write one. It is null unless the resume itself prints a company/role description line for this job (e.g. "Healthcare insurer in California"), in which case copy that line VERBATIM. Do not summarise, characterise, or compose a sentence of your own. NEVER put duty bullets, action verbs, or summary sentences into description — those belong in responsibilities[].
 - projects[] rules (BE STRICT):
   • Use projects[] ONLY when the source resume EXPLICITLY labels sub-projects with their own headings (e.g. "Project 1: <Name>" or a discrete project name on its own line followed by its own bullet list).
   • When the segment DOES contain explicitly labeled sub-projects, you MUST extract EVERY one of them — each with its projectName, clientName (if written), projectLocation (if written), keyTechnologies (if written), and its COMPLETE bullet list copied verbatim into projectResponsibilities[]. NEVER return a project with an empty projectResponsibilities[] when bullets exist under it, and NEVER skip a labeled project.
@@ -62,7 +63,10 @@ Rules:
   • DO NOT invent project names by grouping responsibilities by topic. A long flat list of bullets is NOT a multi-project structure — it's a single role's responsibilities. Put them all in responsibilities[].
   • If you find yourself synthesizing project names from bullet content (e.g. "Lakehouse Architecture Design", "BigID Implementation"), STOP — those are responsibility topics, not labeled sub-projects. Put them as flat entries in responsibilities[].
 - achievements[] should contain ONLY items with measurable results (%, $, headcount, time saved, etc.).
-- technologies_used[] = every tool/language/platform mentioned in this job.
+- technologies_used[] = ONLY the tools/languages/platforms whose names are LITERALLY WRITTEN in this job's text, copied exactly as spelled there.
+  • NEVER infer a technology from a duty. "security and access management" does NOT mean IAM. "containers" does NOT mean Docker or Kubernetes. "cloud" does NOT mean AWS. "reporting" does NOT mean Power BI. If the name is not printed in the segment, it does not go in the array.
+  • NEVER add a related, implied, or typical technology, and never expand an abbreviation into a product name.
+  • If the job names no technologies at all, return [] — an empty array is the correct answer, not a list you assembled from the responsibilities.
 - Return ONLY valid JSON.
 """
 
@@ -74,7 +78,8 @@ CRITICAL RULES:
 3. Copy all responsibilities VERBATIM — do not paraphrase or merge. Never truncate a sentence partway.
 3b. Copy dates EXACTLY as written, INCLUDING months ("Jan 2020", not "2020"). Extract each job's location when written.
 4. Bullets may be marked by ANY glyph (•, ●, ▪, ▸, ‣, ○, ◦, ►, -, *, –, —), numbered (1., 1)), or no glyph at all (prose). Treat them all as bullets.
-5. If the job uses PROSE paragraphs (no bullet points): split each sentence into a separate item in responsibilities[]. Do NOT use the description field for job duties.
+5. If the job uses PROSE paragraphs (no bullet points): each PARAGRAPH becomes one item in responsibilities[], copied verbatim — never sentence-split a paragraph into several items. Do NOT use the description field for job duties.
+5b. ONE source bullet = ONE array item. Return exactly as many items as the source has — never split, never pad. A job with a single responsibility gets exactly one entry.
 6. NEVER leave responsibilities[] empty if the job segment has ANY duty/narrative text — every such job must have at least one entry. Only leave it empty if the segment is truly metadata-only (company/date/title/location/tech list).
 7. If a person worked on sub-projects under one company, structure them in projects[].
 
@@ -201,7 +206,8 @@ class WorkExperienceAgent(BaseAgent):
             bullet_instruction = (
                 f"Extract ALL responsibilities for {company} into the responsibilities[] array. "
                 "If the job uses explicit bullet points (•, -, *, numbers): copy each bullet verbatim as a separate array item. "
-                "If the job uses PROSE paragraphs instead of bullets: split every sentence into an individual item in responsibilities[]. "
+                "If the job uses PROSE paragraphs instead of bullets: copy each paragraph verbatim as ONE array item — never sentence-split it. "
+                "Return exactly as many items as the source has: never split one bullet into several and never add an item the source does not have. "
                 "Do NOT put job duties into the description field. "
                 "NEVER leave responsibilities[] empty — every job must have at least one entry."
             )

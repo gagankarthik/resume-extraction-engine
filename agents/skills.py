@@ -7,6 +7,8 @@ SKILLS_SYSTEM = """Extract ONLY skills that are explicitly named in the resume. 
 
 A skill is a named technology, tool, platform, language, framework, methodology, or concept that appears verbatim (or near-verbatim) in the resume. Job duties, action verbs, and activity phrases are NOT skills.
 
+NEVER infer a skill from what a duty implies. "security and access management" is NOT IAM. "containers" is NOT Docker or Kubernetes. "cloud" is NOT AWS or Azure. "reporting" is NOT Power BI or Tableau. If the name is not printed in the resume, it does not belong in ANY category — and never add a related or typical technology alongside one that is written.
+
 Skills sections come in MANY layouts — comma lists, bullet lists, two-column tables, skill matrices, category grids, sidebars. Scan the ENTIRE document for them (a "Technical Skills" / "Skills" / "Tools" section may appear anywhere, including after work experience). Never return empty output when the resume contains a skills section.
 
 You will produce TWO views of the same skills inventory:
@@ -40,7 +42,7 @@ Return ONLY this JSON:
     "programming_languages": [], "frameworks_and_libraries": [], "databases": [],
     "cloud_platforms": [], "tools_and_platforms": [], "operating_systems": [],
     "methodologies": [], "domain_skills": [], "design_skills": [],
-    "languages_spoken": [], "other_skills": [],
+    "other_skills": [],
     "categories": [
       { "name": "<verbatim label from resume>", "skills": ["skill1", "skill2"] }
     ]

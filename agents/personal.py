@@ -20,7 +20,7 @@ Return ONLY this JSON:
     "linkedin_url": null, "github_url": null, "portfolio_url": null,
     "twitter_url": null, "other_urls": [],
     "date_of_birth": null, "nationality": null, "gender": null,
-    "marital_status": null, "profile_headline": null
+    "marital_status": null
   },
   "professional_summary": null,
   "objective": null
@@ -28,9 +28,10 @@ Return ONLY this JSON:
 
 Rules for the name fields:
 - full_name MUST be the candidate's COMPLETE name — first, middle (if present), AND last name. The name may be split across lines, columns, or header/footer; combine all parts. NEVER drop the last name.
-- If the resume shows the name in ALL CAPS (e.g. "JOHN SMITH"), convert it to standard Title Case ("John Smith"). Preserve internal punctuation (O'Brien, Smith-Jones) and suffixes (Jr., III).
+- Copy the name EXACTLY as the resume writes it, character for character. Do NOT change its capitalisation — a name printed "JOHN SMITH" stays "JOHN SMITH". Keep internal punctuation (O'Brien, Smith-Jones) and suffixes (Jr., III) as written.
 - Always fill first_name and last_name from full_name (last_name = the final surname token).
 - Do NOT invent any value that is not present in the resume.
+- Do NOT extract or infer a headline, title, role, or designation for the candidate. That field does not exist in this schema — the recruiter supplies it separately. Job titles inside work experience are unaffected and are still extracted there.
 
 Rules for professional_summary:
 - Extract the full text of any section labelled "Summary", "Professional Summary", "Profile", "About Me", "Career Summary", "Executive Summary", "Overview", or similar.

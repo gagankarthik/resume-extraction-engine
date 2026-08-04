@@ -77,8 +77,11 @@ WORK EXPERIENCE — CRITICAL RULES
 ═══════════════════════════════════════════
 10. NEVER leave responsibilities[] empty for any job. Every role must have at least one entry.
     • If bullet points exist → copy them verbatim into responsibilities[].
-    • If the resume uses paragraph prose instead of bullets → split the paragraph into individual
-      sentence-length items and place each sentence as a separate responsibilities[] entry.
+    • ONE source bullet = ONE array item. Return EXACTLY as many items as the source has — never
+      split one bullet into several, never add an item the source does not contain, and never pad
+      a short list. A job with a single responsibility gets exactly one entry.
+    • If the resume uses paragraph prose instead of bullets → each PARAGRAPH becomes one verbatim
+      responsibilities[] entry. Do NOT sentence-split a paragraph into several entries.
     • If a "Competencies", "Key Skills", "Profile", "Expertise", or "Project Highlights" block
       appears near a job entry (same date range or same company) → assign those items as
       responsibilities for that job.
@@ -90,10 +93,17 @@ WORK EXPERIENCE — CRITICAL RULES
     • job_title = the position / role held by the candidate.
 13. If a person held multiple roles at the same company, create a SEPARATE work_experience object
     for each role with its own start_date, end_date, and responsibilities.
-14. For achievements[] — extract any bullet or sentence that contains a measurable outcome,
-    award, recognition, or quantified result (%, $, headcount, time saved, etc.).
-15. For technologies_used[] — extract every tool, language, platform, or technology explicitly
-    mentioned in the context of that role.
+14. For achievements[] — extract any bullet or sentence that contains a measurable outcome or
+    quantified result (%, $, headcount, time saved, etc.), copied VERBATIM from the resume.
+14a. These sections are NOT part of this schema. SKIP them entirely — do not return them and do
+    not move their content into another field: Awards / Honors / Recognition; Volunteer
+    Experience; Languages; Publications; Professional Memberships; Interests / Hobbies.
+15. For technologies_used[] — ONLY tools, languages, or platforms whose names are LITERALLY
+    WRITTEN in that role's text, copied exactly as spelled.
+    • NEVER infer one from a duty: "security and access management" is NOT IAM, "containers" is
+      NOT Docker, "cloud" is NOT AWS. If the name is not printed there, it does not go in.
+    • NEVER add a related, implied, or typical technology alongside the ones that are written.
+    • If the role names none, return [] — not a list assembled from its responsibilities.
 
 ═══════════════════════════════════════════
 EDUCATION — CRITICAL RULES
@@ -113,26 +123,13 @@ ANALYTICS — ALWAYS COMPUTE ALL FIELDS
 21. total_years_of_experience — sum non-overlapping calendar spans across all work_experience
     entries; round to one decimal place.
 22. total_months_of_experience — same but in months (integer).
-23. career_level — choose one:
-    "Entry-Level"  (0–2 years, or titles like Junior/Associate/Intern)
-    "Mid-Level"    (3–7 years, individual-contributor titles without people management)
-    "Senior"       (8+ years, or Senior/Lead/Principal/Staff titles)
-    "Director"     (Director/VP/Head of titles)
-    "Executive"    (C-suite/Partner/Managing Director/President)
-    NEVER leave this null.
-24. primary_industry — choose the best-fit industry from the candidate's roles and employers
-    (e.g. "Information Technology", "Healthcare", "Financial Services", "Government",
-    "Manufacturing", "Education", "Consulting", "Telecommunications"). NEVER leave null.
-25. secondary_industries[] — list any additional industries evident in the resume.
-26. job_functions[] — list the main functional areas (e.g. "Software Engineering",
-    "Data Architecture", "Project Management", "Business Analysis").
-27. highest_education_level — e.g. "Master's Degree", "Bachelor's Degree", "Doctorate",
-    "Associate's Degree", "High School Diploma". NEVER leave null.
-28. number_of_companies — count distinct employers (not roles).
-29. number_of_roles — count total job entries including promotions.
-30. average_tenure_months — total_months_of_experience / number_of_roles, rounded to integer.
-31. primary_location — city and country of most recent or most prevalent work location.
-32. resume_language — ISO 639-1 code (e.g. "en", "fr", "de").
+23. number_of_companies — count distinct employers (not roles).
+24. number_of_roles — count total job entries including promotions.
+25. average_tenure_months — total_months_of_experience / number_of_roles, rounded to integer.
+26. primary_location — city and country of most recent or most prevalent work location.
+    Do NOT judge the candidate. career_level, primary_industry, secondary_industries,
+    job_functions and highest_education_level are NOT part of this schema — those are opinions
+    about the person rather than anything the resume states. Analytics is arithmetic only.
 
 ═══════════════════════════════════════════
 SKILLS — CATEGORISATION RULES
@@ -148,7 +145,6 @@ SKILLS — CATEGORISATION RULES
 41. soft_skills[] — Leadership, Communication, Problem Solving, etc. (only if explicitly stated).
 42. domain_skills[] — industry-specific knowledge areas (e.g. "Data Warehousing",
     "ETL", "Risk Management", "Network Architecture").
-43. languages_spoken[] — natural languages and proficiency if mentioned.
 
 ═══════════════════════════════════════════
 TEXT ARTEFACT HANDLING
@@ -186,8 +182,7 @@ REQUIRED JSON STRUCTURE:
     "date_of_birth": null,
     "nationality": null,
     "gender": null,
-    "marital_status": null,
-    "profile_headline": null
+    "marital_status": null
   },
   "professional_summary": null,
   "objective": null,
@@ -247,7 +242,6 @@ REQUIRED JSON STRUCTURE:
     "methodologies": [],
     "domain_skills": [],
     "design_skills": [],
-    "languages_spoken": [],
     "other_skills": []
   },
   "certifications": [
@@ -277,53 +271,6 @@ REQUIRED JSON STRUCTURE:
       "type": null
     }
   ],
-  "publications": [
-    {
-      "title": "",
-      "authors": [],
-      "publisher": null,
-      "journal": null,
-      "conference": null,
-      "date": null,
-      "url": null,
-      "doi": null,
-      "isbn": null,
-      "description": null,
-      "type": null
-    }
-  ],
-  "awards_and_honors": [
-    {
-      "title": "",
-      "issuer": null,
-      "date": null,
-      "description": null,
-      "level": null
-    }
-  ],
-  "volunteer_experience": [
-    {
-      "organization": "",
-      "role": null,
-      "start_date": null,
-      "end_date": null,
-      "is_current": false,
-      "location": null,
-      "description": null,
-      "responsibilities": [],
-      "cause": null
-    }
-  ],
-  "languages": [
-    {
-      "language": "",
-      "proficiency": null,
-      "reading": null,
-      "writing": null,
-      "speaking": null
-    }
-  ],
-  "interests_and_hobbies": [],
   "references": [
     {
       "name": null,
@@ -344,16 +291,6 @@ REQUIRED JSON STRUCTURE:
       "status": null,
       "inventors": [],
       "url": null
-    }
-  ],
-  "professional_memberships": [
-    {
-      "organization": "",
-      "role": null,
-      "membership_type": null,
-      "start_date": null,
-      "end_date": null,
-      "is_current": false
     }
   ],
   "conferences_and_talks": [
@@ -399,18 +336,11 @@ REQUIRED JSON STRUCTURE:
   "analytics": {
     "total_years_of_experience": null,
     "total_months_of_experience": null,
-    "career_level": null,
-    "primary_industry": null,
-    "secondary_industries": [],
-    "job_functions": [],
-    "highest_education_level": null,
     "number_of_companies": null,
     "number_of_roles": null,
     "average_tenure_months": null,
     "has_international_experience": null,
-    "primary_location": null,
-    "salary_mentioned": null,
-    "resume_language": null
+    "primary_location": null
   },
   "raw_sections": {
     "section_names_found": [],

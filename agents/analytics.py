@@ -12,25 +12,14 @@ from .base import BaseAgent
 
 logger = logging.getLogger(__name__)
 
-ANALYTICS_SYSTEM = """Given the work experience and education data below, classify:
-
-1. career_level: one of "Entry-Level" / "Mid-Level" / "Senior" / "Director" / "Executive"
-2. primary_industry: e.g. "Information Technology", "Healthcare", "Financial Services", "Consulting"
-3. secondary_industries: list of any additional industries
-4. job_functions: list of main functional areas e.g. ["Software Engineering", "Data Architecture"]
-5. highest_education_level: e.g. "Master's Degree", "Bachelor's Degree", "Doctorate"
-6. resume_language: ISO 639-1 code e.g. "en"
-
-Return ONLY this JSON:
-{
-  "career_level": null,
-  "primary_industry": null,
-  "secondary_industries": [],
-  "job_functions": [],
-  "highest_education_level": null,
-  "resume_language": "en"
-}
-"""
+# No LLM classification lives here any more.
+#
+# career_level, primary_industry, secondary_industries, job_functions and
+# highest_education_level were all judgements ABOUT the candidate rather than
+# anything the resume said. "Senior" / "Information Technology" appear nowhere
+# in the source document, and the tool's contract is to return the resume's own
+# text and nothing else. What remains below is arithmetic over dates and
+# locations the resume does state.
 
 _MONTH_MAP = {
     "jan": 1, "feb": 2, "mar": 3, "apr": 4, "may": 5, "jun": 6,
@@ -98,7 +87,6 @@ class AnalyticsAgent(BaseAgent):
 
     async def run(self, merged: dict) -> dict:
         work = merged.get("work_experience", [])
-        edu = merged.get("education", [])
 
         # Compute numeric fields in Python (deterministic)
         total_months = self._non_overlapping_months(work)
@@ -107,46 +95,17 @@ class AnalyticsAgent(BaseAgent):
         num_roles = len(work)
         avg_tenure = round(total_months / num_roles) if num_roles else None
 
-        # Ask LLM for classification fields
-        classification = await self._classify(work, edu)
-
         return {
             "total_years_of_experience": total_years,
             "total_months_of_experience": int(total_months),
-            "career_level": classification.get("career_level"),
-            "primary_industry": classification.get("primary_industry"),
-            "secondary_industries": classification.get("secondary_industries", []),
-            "job_functions": classification.get("job_functions", []),
-            "highest_education_level": classification.get("highest_education_level"),
             "number_of_companies": num_companies,
             "number_of_roles": num_roles,
             "average_tenure_months": avg_tenure,
             "has_international_experience": self._has_international(work),
             "primary_location": self._primary_location(work),
-            "salary_mentioned": None,
-            "resume_language": classification.get("resume_language", "en"),
         }
 
     # ------------------------------------------------------------------ #
-
-    async def _classify(self, work: list[dict], edu: list[dict]) -> dict:
-        work_summary = "\n".join(
-            f"- {j.get('company_name', '')} | {j.get('job_title', '')} | {j.get('start_date', '')}–{j.get('end_date', '')}"
-            for j in work
-        )
-        edu_summary = "\n".join(
-            f"- {e.get('degree', '')} in {e.get('field_of_study', '')} from {e.get('institution_name', '')}"
-            for e in edu
-        )
-        user_msg = f"WORK EXPERIENCE:\n{work_summary}\n\nEDUCATION:\n{edu_summary}"
-        try:
-            return await self._call_llm_json(
-                ANALYTICS_SYSTEM, user_msg, max_tokens=1024,
-                section="Analytics",
-            )
-        except Exception as exc:
-            logger.warning("[AnalyticsAgent] Classification failed: %s", exc)
-            return {}
 
     @staticmethod
     def _non_overlapping_months(work: list[dict]) -> float:

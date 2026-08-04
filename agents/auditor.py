@@ -100,12 +100,258 @@ def _bullet_is_fabricated(bullet: str, token_set: set[str]) -> bool:
     return bool(_METRIC_RE.search(bullet) or _IMPACT_LEAD_RE.match(bullet))
 
 
-def _scrub_bullets(items: Any, token_set: set[str]) -> tuple[list, int]:
-    """Return (kept_items, dropped_count) for a responsibility/achievement list."""
+# ── Invented-figure guard ───────────────────────────────────────────────────
+#
+# The fabricated-bullet guard above only catches a WHOLLY invented sentence. The
+# more common failure is subtler and survives it: the model copies a real bullet
+# and staples a number onto the end — "Led the ETL migration" becomes "Led the
+# ETL migration, improving throughput by 40%". Its words all trace back to the
+# resume, so is_grounded() passes it, and a percentage the candidate never
+# claimed goes out on a submitted document.
+#
+# Numbers are checkable in a way prose is not: a figure is either written in the
+# resume or it is not. Everything below is deterministic — no LLM, no judgement.
+
+# Figures the model invents as "impact": percentages, money, multipliers. Bare
+# integers are deliberately excluded — years, versions ("Python 3.9") and team
+# sizes would produce false positives.
+_FIGURE_RE = re.compile(
+    r"\d+(?:[.,]\d+)?\s*%"
+    r"|(?:USD|INR|EUR|GBP|[$₹€£])\s*\d+(?:[.,]\d+)*\s*"
+    r"(?:k\b|m\b|b\b|mn\b|bn\b|million|billion|thousand|crore|cr\b|lakh|lac\b)?"
+    r"|\b\d+(?:\.\d+)?\s*x\b",
+    re.I,
+)
+
+_MAGNITUDE = {
+    "thousand": "k", "million": "m", "billion": "b", "crore": "cr",
+    "lakh": "l", "lac": "l", "mn": "m", "bn": "b",
+    "k": "k", "m": "m", "b": "b", "cr": "cr",
+}
+
+
+def _figure_key(fig: str) -> str:
+    """Canonical form of a figure, so "$2 million" and "$2M" compare equal."""
+    s = fig.lower().replace(",", "").replace(" ", "")
+    num = re.search(r"\d+(?:\.\d+)?", s)
+    if not num:
+        return s
+    n = num.group(0)
+    if "." in n:
+        n = n.rstrip("0").rstrip(".")
+    if "%" in s:
+        return f"pct:{n}"
+    if re.search(r"\d\s*x$", s):
+        return f"mult:{n}"
+    tail = s[num.end():]
+    mag = next((v for k, v in _MAGNITUDE.items() if tail.startswith(k)), "")
+    return f"money:{n}{mag}"
+
+
+def _figures(text: str) -> set[str]:
+    return {_figure_key(m.group(0)) for m in _FIGURE_RE.finditer(text or "")}
+
+
+def source_line_index(raw_text: str) -> list[tuple[str, set[str]]]:
+    """Substantial resume lines paired with their token sets, for re-anchoring."""
+    index: list[tuple[str, set[str]]] = []
+    for line in (raw_text or "").split("\n"):
+        stripped = re.sub(r"^[•●◦‣⁃∙·○▪▸\-–—*]\s*", "", line.strip()).strip()
+        toks = set(_tokens(stripped))
+        if len(toks) >= 4:
+            index.append((stripped, toks))
+    return index
+
+
+def _source_match(bullet: str, index: list[tuple[str, set[str]]]) -> str | None:
+    """The resume line this bullet was copied from, if one clearly matches.
+
+    Requires agreement in BOTH directions — most of the source line's words
+    appear in the bullet, and most of the bullet's words come from that line —
+    so a bullet is never swapped for a different job's text.
+    """
+    btoks = set(_tokens(bullet))
+    if not btoks:
+        return None
+    best: str | None = None
+    best_score = 0.0
+    for line, ltoks in index:
+        overlap = len(ltoks & btoks)
+        score = overlap / len(ltoks)
+        if score > best_score and overlap / len(btoks) >= 0.5:
+            best, best_score = line, score
+    return best if best_score >= 0.6 else None
+
+
+# Clause boundaries an appended impact phrase hangs off.
+_CLAUSE_BOUNDARY_RE = re.compile(r"\s*[,;(]\s*|\s+[—–-]\s+")
+
+
+def _excise_figure(bullet: str, bad: set[str]) -> str | None:
+    """Cut the clause carrying an invented figure, keeping the real text before it.
+
+    Only the trailing clause is removed, and only when a substantial head
+    survives with no ungrounded figures left. Nothing is reworded and no
+    punctuation is added — the head is returned exactly as it was written.
+    """
+    for m in _FIGURE_RE.finditer(bullet):
+        if _figure_key(m.group(0)) not in bad:
+            continue
+        cut = None
+        for b in _CLAUSE_BOUNDARY_RE.finditer(bullet):
+            if b.start() >= m.start():
+                break
+            cut = b.start()
+        if cut is None:
+            return None
+        head = bullet[:cut].rstrip(" ,;:-–—(")
+        if len(head.split()) < 5 or _figures(head) & bad:
+            return None
+        return head
+    return None
+
+
+def repair_figures(
+    bullet: str,
+    source_figures: set[str],
+    index: list[tuple[str, set[str]]],
+) -> str | None:
+    """Return the bullet verbatim, a corrected version, or None to drop it.
+
+    Order of preference: leave it alone → restore the resume's own line →
+    cut the invented clause → drop. A bullet whose figures all appear in the
+    resume is returned untouched, which is the overwhelmingly common case.
+    """
+    if not isinstance(bullet, str) or not bullet.strip():
+        return bullet
+    bad = _figures(bullet) - source_figures
+    if not bad:
+        return bullet
+
+    original = _source_match(bullet, index)
+    if original and not (_figures(original) & bad):
+        return original
+
+    return _excise_figure(bullet, bad)
+
+
+def _scrub_bullets(
+    items: Any,
+    token_set: set[str],
+    source_figures: set[str] | None = None,
+    index: list[tuple[str, set[str]]] | None = None,
+) -> tuple[list, int, int]:
+    """Return (kept_items, dropped_count, repaired_count) for a bullet list."""
+    if not isinstance(items, list):
+        return items, 0, 0
+    kept: list = []
+    repaired = 0
+    for b in items:
+        if _bullet_is_fabricated(b, token_set):
+            continue
+        if source_figures is None or index is None:
+            kept.append(b)
+            continue
+        fixed = repair_figures(b, source_figures, index)
+        if fixed is None:
+            continue  # invented figure that could not be traced or cut
+        if isinstance(b, str) and fixed != b:
+            repaired += 1
+        kept.append(fixed)
+    return kept, len(items) - len(kept), repaired
+
+
+# ── Technology guard ────────────────────────────────────────────────────────
+
+
+def _flatten(s: str) -> str:
+    """Lowercase and drop everything that is not a letter or digit."""
+    return re.sub(r"[^a-z0-9]", "", (s or "").lower())
+
+
+def source_terms(raw_text: str) -> tuple[set[str], str, str]:
+    """The three views of the source text the technology guard compares against."""
+    return set(_tokens(raw_text)), (raw_text or "").lower(), _flatten(raw_text)
+
+
+def tech_is_grounded(tech: str, src: tuple[set[str], str, str]) -> bool:
+    """True only when the technology is NAMED in the resume.
+
+    Technologies are the easiest field to hallucinate, because the model reads
+    a duty and supplies the tool that duty implies: "security and access
+    management" yields IAM, "containers" yields Kubernetes, "cloud" yields AWS.
+    Those are the model's inferences about the candidate's stack, not the
+    candidate's claims, and on a submitted resume they are fabricated skills.
+
+    Three ways to pass, in order of strictness:
+      1. every significant word of the name appears in the source;
+      2. the name with punctuation removed appears in the equally flattened
+         source — this rescues spelling variants ("NodeJS" for "Node.js",
+         "CI/CD" for "CICD"). Restricted to 4+ characters so a short acronym
+         like IAM can never be matched inside an unrelated word;
+      3. names too short or too symbolic to tokenise at all (C#, R, Go, C++)
+         get a word-boundary search against the raw text.
+
+    Errors lean toward keeping: a false keep leaves the resume's own wording in
+    place, whereas a false drop deletes something the candidate really wrote.
+    """
+    token_set, raw_lower, flat_source = src
+    if not isinstance(tech, str) or not tech.strip():
+        return False
+    toks = _tokens(tech)
+    if toks:
+        if all(t in token_set for t in toks):
+            return True
+        flat = _flatten(tech)
+        return len(flat) >= 4 and flat in flat_source
+    return re.search(rf"(?<!\w){re.escape(tech.strip().lower())}(?!\w)", raw_lower) is not None
+
+
+def _scrub_techs(items: Any, src: tuple[set[str], str, str]) -> tuple[list, int]:
     if not isinstance(items, list):
         return items, 0
-    kept = [b for b in items if not _bullet_is_fabricated(b, token_set)]
+    kept = [t for t in items if tech_is_grounded(t, src)]
     return kept, len(items) - len(kept)
+
+
+def _scrub_tech_string(value: Any, src: tuple[set[str], str, str]) -> tuple[Any, int]:
+    """Same filter for the comma-separated keyTechnologies string on projects."""
+    if not isinstance(value, str) or not value.strip():
+        return value, 0
+    parts = [p.strip() for p in value.split(",") if p.strip()]
+    kept = [p for p in parts if tech_is_grounded(p, src)]
+    if len(kept) == len(parts):
+        return value, 0
+    return (", ".join(kept) or None), len(parts) - len(kept)
+
+
+# Every skills bucket is a plain list of named skills, so the same rule applies:
+# a skill the resume never names is the model's inference, not the candidate's.
+_SKILL_LIST_FIELDS = (
+    "all_skills_raw", "technical_skills", "soft_skills", "programming_languages",
+    "frameworks_and_libraries", "databases", "cloud_platforms", "tools_and_platforms",
+    "operating_systems", "methodologies", "domain_skills", "design_skills", "other_skills",
+)
+
+
+def scrub_skills(skills: Any, src: tuple[set[str], str, str]) -> int:
+    """Drop skills not named in the resume. Returns how many were removed."""
+    if not isinstance(skills, dict):
+        return 0
+    dropped = 0
+    for field in _SKILL_LIST_FIELDS:
+        kept, n = _scrub_techs(skills.get(field), src)
+        if n:
+            skills[field] = kept
+            dropped += n
+    for cat in skills.get("categories") or []:
+        if not isinstance(cat, dict):
+            continue
+        kept, n = _scrub_techs(cat.get("skills"), src)
+        if n:
+            cat["skills"] = kept
+            dropped += n
+    return dropped
 
 
 def _url_fragment(url: str) -> str:
@@ -121,6 +367,9 @@ def ground_check(merged: dict, raw_text: str) -> tuple[dict, list[str]]:
     squashed = _squash(raw_text)
     text_digits = _digits(raw_text)
     token_set = set(_tokens(raw_text))
+    source_figures = _figures(raw_text)
+    line_index = source_line_index(raw_text)
+    src = source_terms(raw_text)
 
     pi = merged.get("personal_information")
     if isinstance(pi, dict):
@@ -156,14 +405,27 @@ def ground_check(merged: dict, raw_text: str) -> tuple[dict, list[str]]:
 
         # Drop AI-fabricated responsibilities/achievements (invented metrics or
         # ungrounded impact sentences) before any further processing.
-        resp_scrubbed, resp_dropped = _scrub_bullets(job.get("responsibilities"), token_set)
-        if resp_dropped:
+        resp_scrubbed, resp_dropped, resp_fixed = _scrub_bullets(
+            job.get("responsibilities"), token_set, source_figures, line_index)
+        if resp_dropped or resp_fixed:
             job["responsibilities"] = resp_scrubbed
-            warnings.append(f"Removed {resp_dropped} fabricated/ungrounded responsibility bullet(s) ({company})")
-        ach_scrubbed, ach_dropped = _scrub_bullets(job.get("achievements"), token_set)
-        if ach_dropped:
+            if resp_dropped:
+                warnings.append(f"Removed {resp_dropped} fabricated/ungrounded responsibility bullet(s) ({company})")
+            if resp_fixed:
+                warnings.append(f"Removed invented figures from {resp_fixed} responsibility bullet(s) ({company})")
+        ach_scrubbed, ach_dropped, ach_fixed = _scrub_bullets(
+            job.get("achievements"), token_set, source_figures, line_index)
+        if ach_dropped or ach_fixed:
             job["achievements"] = ach_scrubbed
-            warnings.append(f"Removed {ach_dropped} fabricated/ungrounded achievement(s) ({company})")
+            if ach_dropped:
+                warnings.append(f"Removed {ach_dropped} fabricated/ungrounded achievement(s) ({company})")
+            if ach_fixed:
+                warnings.append(f"Removed invented figures from {ach_fixed} achievement(s) ({company})")
+
+        tech_scrubbed, tech_dropped = _scrub_techs(job.get("technologies_used"), src)
+        if tech_dropped:
+            job["technologies_used"] = tech_scrubbed
+            warnings.append(f"Removed {tech_dropped} technology/technologies not named in the resume ({company})")
 
         kept_projects = []
         for proj in job.get("projects") or []:
@@ -182,10 +444,22 @@ def ground_check(merged: dict, raw_text: str) -> tuple[dict, list[str]]:
                 resp.extend(b for b in bullets if _squash(b) not in existing)
                 warnings.append(f"Dropped invented project heading '{pname}' ({company}); kept its bullets")
                 continue
-            pr_scrubbed, pr_dropped = _scrub_bullets(proj.get("projectResponsibilities"), token_set)
-            if pr_dropped:
+            kt_scrubbed, kt_dropped = _scrub_tech_string(proj.get("keyTechnologies"), src)
+            if kt_dropped:
+                proj["keyTechnologies"] = kt_scrubbed
+                warnings.append(
+                    f"Removed {kt_dropped} technology/technologies not named in the resume "
+                    f"({company}/{pname or 'project'})"
+                )
+
+            pr_scrubbed, pr_dropped, pr_fixed = _scrub_bullets(
+                proj.get("projectResponsibilities"), token_set, source_figures, line_index)
+            if pr_dropped or pr_fixed:
                 proj["projectResponsibilities"] = pr_scrubbed
-                warnings.append(f"Removed {pr_dropped} fabricated project bullet(s) ({company}/{pname or 'project'})")
+                if pr_dropped:
+                    warnings.append(f"Removed {pr_dropped} fabricated project bullet(s) ({company}/{pname or 'project'})")
+                if pr_fixed:
+                    warnings.append(f"Removed invented figures from {pr_fixed} project bullet(s) ({company}/{pname or 'project'})")
             kept_projects.append(proj)
         if job.get("projects") is not None:
             job["projects"] = kept_projects
@@ -205,14 +479,30 @@ def ground_check(merged: dict, raw_text: str) -> tuple[dict, list[str]]:
                 warnings.append(f"Removed {len(resp) - len(deduped)} duplicate bullet(s) ({company})")
             job["responsibilities"] = deduped
 
+    skills_dropped = scrub_skills(merged.get("skills"), src)
+    if skills_dropped:
+        warnings.append(f"Removed {skills_dropped} skill(s) not named in the resume")
+
     # Standalone projects: scrub fabricated highlights the same way.
     for proj in merged.get("projects") or []:
         if not isinstance(proj, dict):
             continue
-        hl_scrubbed, hl_dropped = _scrub_bullets(proj.get("highlights"), token_set)
-        if hl_dropped:
+        pt_scrubbed, pt_dropped = _scrub_techs(proj.get("technologies"), src)
+        if pt_dropped:
+            proj["technologies"] = pt_scrubbed
+            warnings.append(
+                f"Removed {pt_dropped} technology/technologies not named in the resume "
+                f"({proj.get('name') or 'project'})"
+            )
+
+        hl_scrubbed, hl_dropped, hl_fixed = _scrub_bullets(
+            proj.get("highlights"), token_set, source_figures, line_index)
+        if hl_dropped or hl_fixed:
             proj["highlights"] = hl_scrubbed
-            warnings.append(f"Removed {hl_dropped} fabricated project highlight(s) ({proj.get('name') or 'project'})")
+            if hl_dropped:
+                warnings.append(f"Removed {hl_dropped} fabricated project highlight(s) ({proj.get('name') or 'project'})")
+            if hl_fixed:
+                warnings.append(f"Removed invented figures from {hl_fixed} project highlight(s) ({proj.get('name') or 'project'})")
 
     return merged, warnings
 
