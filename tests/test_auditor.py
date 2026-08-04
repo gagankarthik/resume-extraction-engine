@@ -9,17 +9,22 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from agents.auditor import (
+    _CERTIFICATION_HEADING,
+    _EXPERIENCE_HEADING,
     _figure_key,
     _figures,
     _tokens,
     coverage_report,
     ground_check,
+    has_section,
     is_grounded,
     merge_recovered,
     repair_figures,
     scrub_skills,
+    source_bullet_blocks,
     source_line_index,
     source_terms,
+    strip_dropped_sections,
     tech_is_grounded,
 )
 
@@ -197,8 +202,243 @@ def test_merge_recovered_is_additive_and_deduped():
     assert added["skills"] == 1 and "Terraform" in merged["skills"]["other_skills"]
     assert merged["professional_summary"] == "A summary."
 
-    # Summary must never be overwritten once present.
-    merge_recovered(merged, {"professional_summary": "Different."})
+    # An existing summary is never OVERWRITTEN — the recovery pass returns the
+    # missed fragment, not the whole section.
+    merge_recovered(merged, {"professional_summary": "A summary."})
+    assert merged["professional_summary"] == "A summary."
+
+
+# ── Sections the resume does not have ───────────────────────────────────────
+
+NO_SECTIONS_RESUME = """
+Jane Doe
+jane.doe@example.com
+
+SUMMARY
+Recent graduate seeking an entry-level data role.
+
+TECHNICAL SKILLS
+Python, SQL, Pandas, scikit-learn
+Built a sentiment classifier for a course project
+
+EDUCATION
+Bachelor of Science in Computer Science, State University, 2025
+"""
+
+
+def test_certifications_dropped_when_the_resume_has_no_such_section():
+    merged = {"certifications": [{"name": "Built a sentiment classifier for a course project"}]}
+    merged, warnings = ground_check(merged, NO_SECTIONS_RESUME)
+    assert merged["certifications"] == []
+    assert any("no certifications section" in w for w in warnings), warnings
+
+
+def test_work_experience_dropped_when_the_resume_has_no_experience_section():
+    # The PAS / fresher case: skills and coursework promoted into a job.
+    merged = {"work_experience": [{
+        "company_name": "Python, SQL, Pandas",
+        "responsibilities": ["Built a sentiment classifier for a course project"],
+    }]}
+    merged, warnings = ground_check(merged, NO_SECTIONS_RESUME)
+    assert merged["work_experience"] == []
+    assert any("no experience section" in w for w in warnings), warnings
+
+
+def test_real_sections_are_left_alone():
+    resume = """
+WORK EXPERIENCE
+Acme Corporation                     Jan 2020 - Present
+Senior Engineer
+• Built the ingestion service
+
+CERTIFICATIONS
+AWS Certified Solutions Architect
+"""
+    merged = {
+        "work_experience": [{"company_name": "Acme Corporation",
+                             "responsibilities": ["Built the ingestion service"]}],
+        "certifications": [{"name": "AWS Certified Solutions Architect"}],
+    }
+    merged, _ = ground_check(merged, resume)
+    assert len(merged["work_experience"]) == 1
+    assert len(merged["certifications"]) == 1
+
+
+def test_experience_heading_variants_are_all_recognised():
+    # Failing to recognise one of these deletes the whole work history, so the
+    # match is deliberately loose.
+    for heading in [
+        "WORK EXPERIENCE", "PROFESSIONAL EXPERIENCE", "EXPERIENCE",
+        "EXPERIENCE SUMMARY", "RELEVANT WORK EXPERIENCE", "IT EXPERIENCE",
+        "EMPLOYMENT HISTORY", "Work History", "CAREER HISTORY",
+        "ORGANISATIONAL SCAN", "Professional Background",
+    ]:
+        assert has_section(f"NAME\n\n{heading}\nAcme Corp", _EXPERIENCE_HEADING), heading
+    assert not has_section("NAME\n\nTECHNICAL SKILLS\nPython", _EXPERIENCE_HEADING)
+
+
+def test_certification_heading_variants_are_all_recognised():
+    for heading in [
+        "CERTIFICATIONS", "Certificates", "LICENSES", "Licences",
+        "CERTIFICATIONS & LICENSES", "Professional Certifications",
+        "TRAINING AND CERTIFICATIONS", "Credentials",
+    ]:
+        assert has_section(f"NAME\n\n{heading}\nAWS", _CERTIFICATION_HEADING), heading
+    assert not has_section("NAME\n\nTECHNICAL SKILLS\nPython", _CERTIFICATION_HEADING)
+
+
+def test_dropped_sections_are_excluded_from_coverage():
+    resume = """
+WORK EXPERIENCE
+Acme Corporation
+• Built the ingestion service for the payments platform
+
+AWARDS AND RECOGNITION
+• Employee of the Year for outstanding contribution to the platform team
+• President's Club award for exceeding every quarterly target
+
+EDUCATION
+Bachelor of Science in Computer Science, State University
+"""
+    extracted = {"work_experience": [{
+        "company_name": "Acme Corporation",
+        "responsibilities": ["Built the ingestion service for the payments platform"],
+    }], "education": [{"institution_name": "State University",
+                       "degree": "Bachelor of Science in Computer Science"}]}
+
+    # Against the raw text the awards lines read as gaps, and would be fed to
+    # the recovery pass — which is how removed content comes back.
+    _, missed_raw = coverage_report(extracted, resume)
+    assert any("Employee of the Year" in m for m in missed_raw)
+
+    # Against the audited text they do not exist at all.
+    audited = strip_dropped_sections(resume)
+    assert "Employee of the Year" not in audited
+    assert "President's Club" not in audited
+    assert "Built the ingestion service" in audited
+    assert "State University" in audited
+
+    pct, missed = coverage_report(extracted, audited)
+    assert missed == [], missed
+    assert pct == 100.0
+
+
+# ── Split-bullet repair ─────────────────────────────────────────────────────
+
+SPLIT_RESUME = """
+WORK EXPERIENCE
+Acme Corporation
+• Developed an OCR pipeline for scanned claim forms
+  Achieved 80% accuracy across the validation set
+• Mentored two junior engineers
+"""
+
+
+def test_metric_split_into_its_own_bullet_is_rejoined():
+    blocks = source_bullet_blocks(SPLIT_RESUME)
+    merged = {"work_experience": [{
+        "company_name": "Acme Corporation",
+        "responsibilities": [
+            "Developed an OCR pipeline for scanned claim forms",
+            "Achieved 80% accuracy across the validation set",   # same source bullet
+            "Mentored two junior engineers",
+        ],
+    }]}
+    merged, warnings = ground_check(merged, SPLIT_RESUME)
+    resp = merged["work_experience"][0]["responsibilities"]
+
+    assert len(resp) == 2, resp
+    assert resp[0] == blocks[0]
+    assert "Achieved 80% accuracy across the validation set" in resp[0]
+    assert resp[1] == "Mentored two junior engineers"
+    assert any("Rejoined" in w for w in warnings), warnings
+
+
+def test_separate_bullets_are_not_fused():
+    merged = {"work_experience": [{
+        "company_name": "Acme Corporation",
+        "responsibilities": [
+            "Developed an OCR pipeline for scanned claim forms",
+            "Mentored two junior engineers",
+        ],
+    }]}
+    merged, _ = ground_check(merged, SPLIT_RESUME)
+    assert len(merged["work_experience"][0]["responsibilities"]) == 2
+
+
+def test_recovered_bullet_matches_a_differently_spelled_company():
+    # "Acme Corp" vs "Acme Corporation" failed the old strict-subset test and
+    # the bullet was dropped on the floor.
+    merged = {"work_experience": [
+        {"company_name": "Acme Corporation", "responsibilities": []},
+        {"company_name": "Globex International", "responsibilities": []},
+    ]}
+    added = merge_recovered(merged, {"work_bullets": [
+        {"company_name": "Acme Corp", "bullets": ["Built the ingestion service"]},
+    ]})
+    assert added["work_bullets"] == 1
+    assert added["unplaced_bullets"] == 0
+    assert merged["work_experience"][0]["responsibilities"] == ["Built the ingestion service"]
+    assert merged["work_experience"][1]["responsibilities"] == []
+
+
+def test_recovered_bullet_falls_back_to_the_only_job():
+    # One job on the resume — a naming mismatch cannot mean it belongs elsewhere.
+    merged = {"work_experience": [{"company_name": "Acme Corporation", "responsibilities": []}]}
+    added = merge_recovered(merged, {"work_bullets": [
+        {"company_name": "", "bullets": ["Built the ingestion service"]},
+    ]})
+    assert added["work_bullets"] == 1
+    assert merged["work_experience"][0]["responsibilities"] == ["Built the ingestion service"]
+
+
+def test_unmatched_bullet_is_counted_rather_than_silently_dropped():
+    merged = {"work_experience": [
+        {"company_name": "Acme Corporation", "responsibilities": []},
+        {"company_name": "Globex International", "responsibilities": []},
+    ]}
+    added = merge_recovered(merged, {"work_bullets": [
+        {"company_name": "Initech", "bullets": ["Did a thing", "Did another thing"]},
+    ]})
+    assert added["work_bullets"] == 0
+    assert added["unplaced_bullets"] == 2
+    # Never guessed onto an unrelated employer.
+    assert merged["work_experience"][0]["responsibilities"] == []
+    assert merged["work_experience"][1]["responsibilities"] == []
+
+
+def test_recovered_summary_line_is_appended_not_dropped():
+    # The 99.3% case: the resume has a summary, one of its bullets went missing,
+    # and recovery returns just that bullet. It used to be thrown away because
+    # professional_summary was already non-empty.
+    missing = "Technically adept software programmer with exceptional coding and documentation skills"
+    merged = {"professional_summary": "• Ten years building data platforms\n• Led teams of up to 12"}
+
+    added = merge_recovered(merged, {"professional_summary": missing})
+
+    assert added["summary_lines"] == 1
+    assert missing in merged["professional_summary"]
+    # Appended in the bullet style the existing summary already uses, and the
+    # lines that were already there are untouched.
+    assert merged["professional_summary"].endswith(f"• {missing}")
+    assert "• Ten years building data platforms" in merged["professional_summary"]
+    assert len(merged["professional_summary"].split("\n")) == 3
+
+
+def test_recovered_summary_already_present_is_not_duplicated():
+    line = "Technically adept software programmer"
+    merged = {"professional_summary": f"• Ten years of experience\n• {line} with strong documentation"}
+
+    added = merge_recovered(merged, {"professional_summary": line})
+
+    assert added["summary_lines"] == 0
+    assert merged["professional_summary"].count(line) == 1
+
+
+def test_recovered_summary_fills_an_empty_one():
+    merged = {}
+    added = merge_recovered(merged, {"professional_summary": "A summary."})
+    assert added["summary_lines"] == 1
     assert merged["professional_summary"] == "A summary."
 
 

@@ -82,12 +82,21 @@ WORK EXPERIENCE — CRITICAL RULES
       a short list. A job with a single responsibility gets exactly one entry.
     • If the resume uses paragraph prose instead of bullets → each PARAGRAPH becomes one verbatim
       responsibilities[] entry. Do NOT sentence-split a paragraph into several entries.
-    • If a "Competencies", "Key Skills", "Profile", "Expertise", or "Project Highlights" block
-      appears near a job entry (same date range or same company) → assign those items as
-      responsibilities for that job.
-11. Scan the ENTIRE document for content that belongs to each job. Responsibilities, project
-    descriptions, and achievements may appear in a separate section far from the job header —
-    match them to the correct job by overlapping date ranges or explicit company/project names.
+    • A trailing detail belongs to the bullet it modifies. "Achieved 80% accuracy",
+      "resulting in 2-day turnaround" and similar result clauses are PART of the responsibility
+      above them — keep them in that same entry. NEVER promote a metric or a result fragment
+      into a responsibility of its own; the candidate wrote one bullet, not two.
+10a. work_experience[] exists ONLY when the resume has a real work-history section
+    ("Work Experience", "Professional Experience", "Employment", "Career History", or similar).
+    • If there is NO such section — a fresher or entry-level candidate with no employment yet —
+      return "work_experience": []. An empty array is the correct answer.
+    • NEVER manufacture a job, a responsibility, or a technology list out of a Skills,
+      Competencies, Projects, Education, Training, or Summary section. A skills block is not a
+      job's responsibilities, and an academic project is not employment.
+11. Within the work-history section, scan for content belonging to each job: responsibilities and
+    achievements may sit slightly apart from their job header — match them to the correct job by
+    overlapping date ranges or explicit company/project names. Do NOT pull in content from
+    non-experience sections to do it.
 12. NEVER confuse the company name with the job title.
     • company_name = the legal name of the employer / organisation.
     • job_title = the position / role held by the candidate.

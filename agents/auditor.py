@@ -261,6 +261,77 @@ def _scrub_bullets(
     return kept, len(items) - len(kept), repaired
 
 
+# ── Split-bullet repair ─────────────────────────────────────────────────────
+
+
+def source_bullet_blocks(raw_text: str) -> list[str]:
+    """The resume's bullets, each with its continuation lines folded back in.
+
+    normalize_text() has already rewritten every leading glyph to "• ", so a
+    line starting with one opens a bullet and every line after it that does not
+    belongs to that same bullet.
+    """
+    blocks: list[str] = []
+    current: str | None = None
+    for line in (raw_text or "").split("\n"):
+        stripped = line.strip()
+        if not stripped:
+            current = None
+            continue
+        if stripped.startswith("•"):
+            if current:
+                blocks.append(current)
+            current = stripped.lstrip("•").strip()
+        elif current is not None:
+            current = f"{current} {stripped}"
+    if current:
+        blocks.append(current)
+    return [b for b in blocks if b]
+
+
+def merge_split_bullets(
+    responsibilities: Any,
+    blocks: list[str],
+    blocks_squashed: list[str],
+) -> tuple[Any, int]:
+    """Rejoin responsibilities that the model split out of one source bullet.
+
+    A trailing detail — most often a metric, "Achieved 80% accuracy" — gets
+    emitted as its own responsibility, so the rendered resume shows two bullets
+    where the candidate wrote one. Consecutive responsibilities that trace back
+    to the SAME source bullet are replaced by that bullet's own text, which
+    restores both the count and the wording without composing anything.
+    """
+    if not isinstance(responsibilities, list) or len(responsibilities) < 2:
+        return responsibilities, 0
+
+    # Which source bullet did each responsibility come from? Exact containment
+    # of the squashed text — responsibilities are copied verbatim, so a looser
+    # test would risk fusing two genuinely separate bullets.
+    origins: list[int | None] = []
+    for item in responsibilities:
+        squashed = _squash(item) if isinstance(item, str) else ""
+        origins.append(
+            next((i for i, block in enumerate(blocks_squashed) if squashed and squashed in block), None)
+        )
+
+    out: list = []
+    merged = 0
+    i = 0
+    while i < len(responsibilities):
+        j = i
+        while j + 1 < len(responsibilities) and origins[i] is not None and origins[j + 1] == origins[i]:
+            j += 1
+        if j > i:
+            out.append(blocks[origins[i]])
+            merged += j - i
+            i = j + 1
+        else:
+            out.append(responsibilities[i])
+            i += 1
+    return out, merged
+
+
 # ── Technology guard ────────────────────────────────────────────────────────
 
 
@@ -370,6 +441,27 @@ def ground_check(merged: dict, raw_text: str) -> tuple[dict, list[str]]:
     source_figures = _figures(raw_text)
     line_index = source_line_index(raw_text)
     src = source_terms(raw_text)
+    blocks = source_bullet_blocks(raw_text)
+    blocks_squashed = [_squash(b) for b in blocks]
+
+    # A section the resume does not have is a section the output must not have.
+    # Without a Certifications heading the model was promoting responsibility
+    # lines into certifications; without an Experience heading it was building
+    # work history out of the skills section. Both are inventions, and both are
+    # settled here rather than hoped for in a prompt.
+    if merged.get("certifications") and not has_section(raw_text, _CERTIFICATION_HEADING):
+        warnings.append(
+            f"Removed {len(merged['certifications'])} certification(s) — the resume has no "
+            "certifications section, so these came from elsewhere in the document"
+        )
+        merged["certifications"] = []
+
+    if merged.get("work_experience") and not has_section(raw_text, _EXPERIENCE_HEADING):
+        warnings.append(
+            f"Removed {len(merged['work_experience'])} work experience entr(y/ies) — the resume "
+            "has no experience section, so these were inferred from other sections"
+        )
+        merged["work_experience"] = []
 
     pi = merged.get("personal_information")
     if isinstance(pi, dict):
@@ -405,6 +497,14 @@ def ground_check(merged: dict, raw_text: str) -> tuple[dict, list[str]]:
 
         # Drop AI-fabricated responsibilities/achievements (invented metrics or
         # ungrounded impact sentences) before any further processing.
+        rejoined, split_count = merge_split_bullets(
+            job.get("responsibilities"), blocks, blocks_squashed)
+        if split_count:
+            job["responsibilities"] = rejoined
+            warnings.append(
+                f"Rejoined {split_count} detail(s) split out of their own bullet ({company})"
+            )
+
         resp_scrubbed, resp_dropped, resp_fixed = _scrub_bullets(
             job.get("responsibilities"), token_set, source_figures, line_index)
         if resp_dropped or resp_fixed:
@@ -507,9 +607,94 @@ def ground_check(merged: dict, raw_text: str) -> tuple[dict, list[str]]:
     return merged, warnings
 
 
-# ── Coverage ────────────────────────────────────────────────────────────────
+# ── Section detection ───────────────────────────────────────────────────────
 
 _HEADER_LIKE = re.compile(r"^[A-Z\s&/:\-]{3,60}$")
+
+# Sections the tool does not produce. Their lines must be excluded from the
+# coverage audit — otherwise every awards line reads as "missed", gets handed to
+# the recovery pass, and comes back merged into work bullets or the summary.
+# Removing a section from the schema and leaving it in the audit input puts the
+# content straight back in through the side door.
+_DROPPED_SECTION_HEADING = re.compile(
+    r"^(?:"
+    r"awards?(?:\s*(?:&|and)\s*(?:honou?rs?|recognitions?|achievements?))?"
+    r"|honou?rs?(?:\s*(?:&|and)\s*awards?)?"
+    r"|recognitions?|accolades?"
+    r"|volunteer(?:ing)?(?:\s+(?:experience|work))?|community\s+(?:service|involvement)"
+    r"|languages?(?:\s+(?:known|spoken|proficiency))?"
+    r"|publications?|papers?|research\s+publications?"
+    r"|(?:professional\s+)?(?:memberships?|affiliations?|associations?)"
+    r"|(?:personal\s+)?interests?(?:\s*(?:&|and)\s*hobbies)?|hobbies"
+    r"|extra[\s-]?curricular(?:\s+activities)?"
+    r")$",
+    re.I,
+)
+
+# These two are matched by CONTAINMENT, not equality, and deliberately so.
+# Their absence deletes a whole section of the output, so the cost of failing to
+# recognise a heading is far higher than the cost of recognising a loose one:
+# "EXPERIENCE SUMMARY", "RELEVANT WORK EXPERIENCE" and "IT EXPERIENCE" are all
+# real headings that an anchored pattern would miss, taking the entire work
+# history down with it.
+_EXPERIENCE_HEADING = re.compile(
+    r"experience|employment|work\s+history|career\s+history"
+    r"|professional\s+background|organi[sz]ational\s+scan",
+    re.I,
+)
+
+_CERTIFICATION_HEADING = re.compile(
+    r"certificat|certification|licen[cs]|credential|accredit",
+    re.I,
+)
+
+
+def _heading_text(line: str) -> str | None:
+    """The line's heading text, or None when it does not read as a heading.
+
+    A heading is short, unpunctuated, and either fully capitalised or a name we
+    recognise. Resumes label sections in every style, so this stays lenient on
+    case and trailing colons and strict on length.
+    """
+    s = (line or "").strip().lstrip("•").strip().rstrip(":").strip()
+    if not s or len(s) > 60 or len(s.split()) > 6 or s.endswith("."):
+        return None
+    letters = [c for c in s if c.isalpha()]
+    if not letters:
+        return None
+    if all(c.isupper() for c in letters):
+        return s
+    if (_DROPPED_SECTION_HEADING.search(s) or _EXPERIENCE_HEADING.search(s)
+            or _CERTIFICATION_HEADING.search(s)):
+        return s
+    return None
+
+
+def has_section(raw_text: str, pattern: re.Pattern[str]) -> bool:
+    """Does the resume carry a heading of this kind?"""
+    return any(
+        (h := _heading_text(line)) is not None and pattern.search(h)
+        for line in (raw_text or "").split("\n")
+    )
+
+
+def strip_dropped_sections(raw_text: str) -> str:
+    """Remove awards / volunteer / languages / publications / memberships /
+    interests blocks, from their heading to the next heading."""
+    kept: list[str] = []
+    skipping = False
+    for line in (raw_text or "").split("\n"):
+        heading = _heading_text(line)
+        if heading is not None:
+            skipping = bool(_DROPPED_SECTION_HEADING.search(heading))
+            if skipping:
+                continue
+        if not skipping:
+            kept.append(line)
+    return "\n".join(kept)
+
+
+# ── Coverage ────────────────────────────────────────────────────────────────
 
 
 def coverage_report(merged: dict, raw_text: str) -> tuple[float, list[str]]:
@@ -546,34 +731,86 @@ def coverage_report(merged: dict, raw_text: str) -> tuple[float, list[str]]:
 
 # ── Additive merge of recovered content ─────────────────────────────────────
 
+# Legal suffixes carry no identifying signal, and the recovery pass and the
+# extraction pass rarely agree on whether to include them.
+_COMPANY_NOISE = {
+    "inc", "llc", "ltd", "limited", "corp", "corporation", "company", "and",
+    "the", "plc", "gmbh", "pvt", "private", "group", "holdings", "solutions",
+    "services", "technologies", "systems", "international",
+}
+
+
+def _company_tokens(name: str) -> set[str]:
+    toks = set(_tokens(name))
+    stripped = toks - _COMPANY_NOISE
+    # An employer genuinely called "Systems Limited" keeps its words rather
+    # than reducing to nothing.
+    return stripped or toks
+
+
+def _best_job_match(company: str, jobs: list[dict]) -> dict | None:
+    """The extracted job a recovered bullet belongs to, or None.
+
+    Matching used to require one company name to be a strict subset of the
+    other, so "Acme Corp" and "Acme Corporation" failed to match and the bullet
+    was dropped. Scoring against the shorter name lets ordinary naming
+    differences through while still refusing an unrelated employer.
+    """
+    comp_toks = _company_tokens(company)
+    if not comp_toks:
+        return None
+    best: dict | None = None
+    best_score = 0.0
+    for job in jobs:
+        job_toks = _company_tokens(str(job.get("company_name") or ""))
+        overlap = len(comp_toks & job_toks)
+        if not overlap:
+            continue
+        score = overlap / min(len(comp_toks), len(job_toks))
+        if score > best_score:
+            best, best_score = job, score
+    return best if best_score >= 0.5 else None
+
+
 def merge_recovered(merged: dict, recovered: dict) -> dict[str, int]:
     """Merge the recovery pass output into `merged` ADDITIVELY.
     Returns counts of what was added, for the audit report."""
-    added = {"work_bullets": 0, "education": 0, "certifications": 0, "projects": 0, "skills": 0}
+    added = {
+        "work_bullets": 0, "education": 0, "certifications": 0,
+        "projects": 0, "skills": 0, "summary_lines": 0,
+        "unplaced_bullets": 0,
+    }
     if not isinstance(recovered, dict):
         return added
 
     # Missed work bullets → append to the job with the matching company.
-    jobs = merged.get("work_experience") or []
+    jobs = [j for j in (merged.get("work_experience") or []) if isinstance(j, dict)]
     for item in recovered.get("work_bullets") or []:
         if not isinstance(item, dict):
             continue
-        comp_toks = set(_tokens(str(item.get("company_name") or "")))
-        target = None
-        for job in jobs:
-            if not isinstance(job, dict):
-                continue
-            jt = set(_tokens(str(job.get("company_name") or "")))
-            if comp_toks and jt and (comp_toks <= jt or jt <= comp_toks):
-                target = job
-                break
-        if target is None:
+        bullets = [b.strip() for b in (item.get("bullets") or []) if isinstance(b, str) and b.strip()]
+        if not bullets:
             continue
+
+        target = _best_job_match(str(item.get("company_name") or ""), jobs)
+        # The recovery pass names the company it read off the resume, which need
+        # not be spelled the way the extraction spelled it. When there is only
+        # one job on the resume the bullet cannot belong anywhere else, so a
+        # naming mismatch should not cost us the line.
+        if target is None and len(jobs) == 1:
+            target = jobs[0]
+        if target is None:
+            # Counted, not silently dropped — an unplaceable bullet is content
+            # the resume contains and the output does not, and the reviewer is
+            # the one who needs to know.
+            added["unplaced_bullets"] += len(bullets)
+            continue
+
         resp = target.setdefault("responsibilities", [])
         existing = {_squash(r) for r in resp if isinstance(r, str)}
-        for b in item.get("bullets") or []:
-            if isinstance(b, str) and b.strip() and _squash(b) not in existing:
-                resp.append(b.strip())
+        for b in bullets:
+            if _squash(b) not in existing:
+                resp.append(b)
                 existing.add(_squash(b))
                 added["work_bullets"] += 1
 
@@ -607,8 +844,35 @@ def merge_recovered(merged: dict, recovered: dict) -> dict[str, int]:
                 skills.setdefault("all_skills_raw", []).append(s.strip())
                 added["skills"] += 1
 
-    if recovered.get("professional_summary") and not merged.get("professional_summary"):
-        merged["professional_summary"] = recovered["professional_summary"]
+    # Missed summary lines → append to the summary already extracted.
+    #
+    # This used to fire only when there was NO summary yet, which made a dropped
+    # summary bullet unrecoverable: the resume has a summary, one of its bullets
+    # goes missing, recovery returns that bullet, and the merge threw it away
+    # because the field was non-empty. Every other bucket here is additive; this
+    # one now is too. Overwriting is still not an option — the recovery pass
+    # returns the missed fragment, not the whole section.
+    recovered_summary = recovered.get("professional_summary")
+    if isinstance(recovered_summary, str) and recovered_summary.strip():
+        existing = str(merged.get("professional_summary") or "").strip()
+        fresh = [ln.strip() for ln in recovered_summary.split("\n") if ln.strip()]
+        if not existing:
+            merged["professional_summary"] = "\n".join(fresh)
+            added["summary_lines"] += len(fresh)
+        else:
+            # Substring match on the squashed text, so a bullet already sitting
+            # inside a single-paragraph summary is not appended a second time.
+            squashed_existing = _squash(existing)
+            keeps_bullets = existing.lstrip().startswith("•")
+            new_lines = [ln for ln in fresh if _squash(ln) not in squashed_existing]
+            if new_lines:
+                merged["professional_summary"] = "\n".join(
+                    [existing] + [
+                        f"• {ln.lstrip('•').strip()}" if keeps_bullets else ln
+                        for ln in new_lines
+                    ]
+                )
+                added["summary_lines"] += len(new_lines)
 
     return added
 
@@ -648,16 +912,30 @@ class CompletenessAuditorAgent(BaseAgent):
             merged, warnings = ground_check(merged, raw_text)
             report["warnings"] = warnings
 
-            coverage, missed = coverage_report(merged, raw_text)
+            # Grounding checks read the whole document; the coverage audit and
+            # the recovery pass must not, or they spend their effort putting the
+            # dropped sections back.
+            audit_text = strip_dropped_sections(raw_text)
+            coverage, missed = coverage_report(merged, audit_text)
             report["coverage_percent"] = coverage
             report["missed_line_count"] = len(missed)
 
             recovery_enabled = os.getenv("ENABLE_AUDIT_RECOVERY", "true").lower() in ("1", "true", "yes")
-            if missed and recovery_enabled and len(missed) >= 2:
+            # Recovery used to require two or more missed lines, which meant the
+            # single-line gap — the most common one, and the one a reviewer
+            # actually reads on a 99.3% report — was never even attempted. One
+            # dropped line is exactly the case worth an extra call.
+            if missed and recovery_enabled:
                 try:
-                    recovered = await self._recover(raw_text, missed[:40])
+                    recovered = await self._recover(audit_text, missed[:40])
                     report["recovered"] = merge_recovered(merged, recovered)
-                    coverage, missed = coverage_report(merged, raw_text)
+                    unplaced = report["recovered"].get("unplaced_bullets", 0)
+                    if unplaced:
+                        report["warnings"].append(
+                            f"{unplaced} recovered bullet(s) could not be matched to a job "
+                            "and were not added — add them by hand"
+                        )
+                    coverage, missed = coverage_report(merged, audit_text)
                     report["coverage_percent"] = coverage
                     report["missed_line_count"] = len(missed)
                 except Exception as exc:

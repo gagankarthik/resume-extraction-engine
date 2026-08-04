@@ -3,7 +3,13 @@ from __future__ import annotations
 
 from .base import BaseAgent
 
-CERT_SYSTEM = """Extract ALL certifications, licenses, and certificates from the resume.
+CERT_SYSTEM = """Extract certifications, licenses, and certificates from the resume.
+
+WHERE THEY MAY COME FROM — this is the whole rule:
+- ONLY from a dedicated section headed "Certifications", "Certificates", "Licenses", "Credentials", or an equivalent title.
+- If the resume has NO such section, return {"certifications": []}. An empty list is the correct answer. Do NOT go looking elsewhere to fill it.
+- NEVER build a certification out of a job responsibility, a skill, a tool name, a degree, or a training course. "Certified Scrum practices adopted across the team" is a responsibility, not a certification. "AWS" in a skills list is a technology, not a certification.
+- Extract EVERY entry inside a real certifications section, copied verbatim.
 
 Return ONLY this JSON:
 {

@@ -31,6 +31,8 @@ Return a JSON object with this exact shape:
 }
 
 Rules:
+- A job entry exists ONLY inside a real work-history section ("Work Experience", "Professional Experience", "Employment", "Career History", or similar). If the resume has NO such section — a fresher or entry-level candidate with no employment yet — return {"jobs": []}. An empty list is the correct answer.
+- NEVER manufacture a job out of a Skills, Technical Skills, Competencies, Projects, Education, Training, or Summary section. A technology list is not an employer, a coursework line is not a role, and an academic project is not a job.
 - List EVERY job in ORDER as they appear in the resume (top to bottom), including old roles from 20-25 years ago.
 - start_date / end_date: copy EXACTLY as written, INCLUDING the month when one is present (e.g. "Jan 2020" — never reduce to just "2020").
 - title: every job must have its title when one is written. location: fill it whenever a city/state appears in the job's header lines.
