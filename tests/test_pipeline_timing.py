@@ -23,7 +23,7 @@ import time
 import pytest
 
 from agents import report
-from agents.deadline import Deadline
+from agents.deadline import Deadline, DeadlineExceeded
 from agents.llm.client import LLMClient
 from agents.llm.providers import Completion
 from config import LLMSettings
@@ -230,6 +230,54 @@ def test_an_exhausted_budget_stops_spending(fake_llm):
         return provider.calls - spent
 
     assert main and asyncio.run(main()) == 0, "calls were still being issued after the deadline"
+
+
+def test_one_slow_agent_cannot_hold_the_whole_run():
+    """The bug that turned a slow resume into a 500.
+
+    gather waits for its slowest branch however long that takes, so a single
+    section still generating at the deadline carried the run past it and out
+    through the caller as an error — discarding five sections that had already
+    succeeded. The stragglers are now cut loose and reported.
+    """
+    from orchestrator import _gather_within
+
+    async def quick(value):
+        return value
+
+    async def never():
+        await asyncio.sleep(30)
+        return "too late"
+
+    async def main():
+        started = time.monotonic()
+        results = await _gather_within(
+            Deadline.in_seconds(0.5), (quick("a"), never(), quick("b"))
+        )
+        return results, time.monotonic() - started
+
+    results, elapsed = asyncio.run(main())
+
+    assert elapsed < 5, f"waited {elapsed:.1f}s for a branch the budget did not cover"
+    assert results[0] == "a"
+    assert results[2] == "b", "a finished section was lost with the slow one"
+    assert isinstance(results[1], DeadlineExceeded)
+
+
+def test_a_failing_agent_is_returned_not_raised():
+    """One section's exception must not become the whole run's exception."""
+    from orchestrator import _gather_within
+
+    async def boom():
+        raise ValueError("section failed")
+
+    async def fine():
+        return "kept"
+
+    results = asyncio.run(_gather_within(Deadline.in_seconds(10), (boom(), fine())))
+
+    assert isinstance(results[0], ValueError)
+    assert results[1] == "kept"
 
 
 def test_deterministic_guards_survive_a_tight_budget(fake_llm):

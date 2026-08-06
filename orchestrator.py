@@ -56,6 +56,39 @@ _SECTION_LABELS = {
 }
 
 
+async def _gather_within(deadline: Deadline, coros: tuple[Any, ...]) -> list[Any]:
+    """Run everything concurrently, but stop waiting when the budget is gone.
+
+    asyncio.gather waits for the slowest branch however long it takes, which is
+    what let one slow section carry the whole run past its deadline and out
+    through the caller as an error. Here the agents that finished are kept, the
+    ones still running are cancelled, and the run continues with a hole in it —
+    a resume missing one section beats no resume at all, and _unwrap records
+    which section it is.
+    """
+    tasks = [asyncio.ensure_future(c) for c in coros]
+    remaining = deadline.remaining()
+    _, pending = await asyncio.wait(
+        tasks, timeout=None if remaining == float("inf") else remaining
+    )
+
+    for task in pending:
+        task.cancel()
+    if pending:
+        await asyncio.gather(*pending, return_exceptions=True)
+
+    results: list[Any] = []
+    for task in tasks:
+        if task in pending:
+            results.append(DeadlineExceeded("still running when the run ran out of time"))
+            continue
+        try:
+            results.append(task.result())
+        except Exception as exc:  # reported per section by _unwrap
+            results.append(exc)
+    return results
+
+
 def _unwrap(result: Any, default: Any, agent_name: str) -> Any:
     """
     Return the agent's result, or the default if it raised.
@@ -117,15 +150,19 @@ class ResumeOrchestrator:
             )
             return await self.work_agent.run(normalized_text, structure)
 
-        raw_results = await asyncio.gather(
-            self.personal_agent.run(normalized_text),
-            work_when_structured(),
-            self.education_agent.run(normalized_text),
-            self.skills_agent.run(normalized_text),
-            self.cert_agent.run(normalized_text),
-            self.supp_agent.run(normalized_text),
-            return_exceptions=True,  # never let one agent failure kill all results
+        raw_results = await _gather_within(
+            deadline,
+            (
+                self.personal_agent.run(normalized_text),
+                work_when_structured(),
+                self.education_agent.run(normalized_text),
+                self.skills_agent.run(normalized_text),
+                self.cert_agent.run(normalized_text),
+                self.supp_agent.run(normalized_text),
+            ),
         )
+        if not structure_task.done():
+            structure_task.cancel()
 
         # Always resolved by now — work_when_structured awaited it, and gather
         # waits for every branch. Reading it here keeps the map available to the

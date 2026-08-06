@@ -20,6 +20,7 @@ import asyncio
 import contextvars
 import logging
 import re
+import time
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -143,15 +144,22 @@ class LLMClient:
             # Two ceilings, whichever is nearer: one call may not outlast the
             # run, and no call may hang indefinitely inside a healthy run.
             timeout = min(float(self.settings.call_timeout_seconds), deadline.remaining())
+            started = time.monotonic()
 
             try:
                 async with self._sem():
-                    completion = await self.provider.complete(
-                        system,
-                        user,
-                        max_tokens=max_tokens,
-                        temperature=temperature,
-                        json_mode=json_mode,
+                    # wait_for as well as the SDK's own timeout. The SDK applies
+                    # its timeout per HTTP attempt; this bounds the call itself,
+                    # so nothing beneath this line can outlive the budget.
+                    completion = await asyncio.wait_for(
+                        self.provider.complete(
+                            system,
+                            user,
+                            max_tokens=max_tokens,
+                            temperature=temperature,
+                            json_mode=json_mode,
+                            timeout=timeout,
+                        ),
                         timeout=timeout,
                     )
                 _record_usage(completion)
@@ -178,9 +186,13 @@ class LLMClient:
                 # budget measured in a couple of them.
                 wait = wait + 0.1 * (attempt + 1) if wait is not None else min(8.0, 2**attempt)
 
-                # Sleeping past the point where the retry could still complete
-                # burns the remaining budget and answers nothing.
-                if not deadline.allows(wait + _MIN_RETRY_SECONDS):
+                # What the attempt just cost is the best estimate of what the
+                # next one will. A fixed floor was far too optimistic for the
+                # calls that actually fail — a section that times out at 90s was
+                # being retried with 8s left, spending the remainder of the run
+                # to arrive nowhere.
+                elapsed = time.monotonic() - started
+                if not deadline.allows(wait + max(_MIN_RETRY_SECONDS, elapsed)):
                     logger.warning(
                         "[%s] attempt %d failed (%s) — no budget left to retry", label, attempt + 1, exc
                     )
@@ -218,6 +230,7 @@ class LLMClient:
 
         for _ in range(self.settings.truncation_escalations + 1):
             attempts += 1
+            started = time.monotonic()
             try:
                 completion = await self.complete(
                     system, user, label=label, max_tokens=budget, temperature=temperature
@@ -226,10 +239,14 @@ class LLMClient:
                 truncation = exc
                 if budget >= self.settings.max_output_tokens:
                     break
-                # Re-asking regenerates the section from nothing. With little
-                # budget left, the complete records already in hand are worth
-                # more than a second attempt that will not finish either.
-                if not get_deadline().allows(_MIN_ESCALATION_SECONDS):
+                # Re-asking regenerates the section from nothing, with twice the
+                # room, so it takes at least as long as the attempt that just
+                # ran out — and that attempt generated to its ceiling by
+                # definition. Requiring only a flat 25s here let a section that
+                # had already burned a minute start another one it could not
+                # finish, and the records in hand were lost with it.
+                elapsed = time.monotonic() - started
+                if not get_deadline().allows(max(_MIN_ESCALATION_SECONDS, elapsed * 1.5)):
                     logger.warning("[%s] cut off — keeping what parsed rather than re-asking", label)
                     break
                 budget = min(budget * 2, self.settings.max_output_tokens)

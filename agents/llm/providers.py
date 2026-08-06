@@ -84,7 +84,12 @@ class OpenAIProvider:
             api_key = os.getenv("OPENAI_API_KEY")
             if not api_key:
                 raise RuntimeError("OPENAI_API_KEY is not set.")
-            self._client = AsyncOpenAI(api_key=api_key)
+            # max_retries=0 because this layer already retries, and only this
+            # layer knows the run's remaining budget. Left at the SDK default of
+            # 2, a per-request timeout of 90s silently became a 270s call: the
+            # deadline could not bound it, and the pipeline blew through its own
+            # limit and returned a 500 instead of a partial result.
+            self._client = AsyncOpenAI(api_key=api_key, max_retries=0)
         return self._client
 
     async def complete(
@@ -140,7 +145,8 @@ class AnthropicProvider:
             api_key = os.getenv("ANTHROPIC_API_KEY")
             if not api_key:
                 raise RuntimeError("ANTHROPIC_API_KEY is not set.")
-            self._client = anthropic.AsyncAnthropic(api_key=api_key)
+            # See OpenAIProvider: retries belong to the layer that owns the clock.
+            self._client = anthropic.AsyncAnthropic(api_key=api_key, max_retries=0)
         return self._client
 
     @staticmethod
