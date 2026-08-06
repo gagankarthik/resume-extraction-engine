@@ -1,13 +1,21 @@
 """
 ResumeOrchestrator — multi-agent pipeline for best-in-class resume extraction.
 
-Stage 1 (sequential):  StructureAgent   → identifies ALL job boundaries, counts bullets
-Stage 2 (parallel):    PersonalAgent, WorkAgent, EducationAgent, SkillsAgent,
-                       CertificationsAgent, SupplementalAgent
-Stage 3 (sequential):  AnalyticsAgent   → computes analytics from merged data
-Stage 4 (sequential):  ValidatorAgent   → cross-validates bullet counts, re-extracts mismatches
-Stage 5 (sequential):  CompletenessAuditorAgent → grounds contact/client/project names against
-                       the source text, measures coverage, recovers missed content additively
+Stage 1 (one wave):    StructureAgent maps job boundaries and counts bullets, while
+                       PersonalAgent, EducationAgent, SkillsAgent, CertificationsAgent
+                       and SupplementalAgent read the document alongside it. Only
+                       WorkAgent needs the structure map, so only WorkAgent waits for
+                       it — the other five have no reason to, and used to anyway.
+Stage 2 (pure Python): AnalyticsAgent computes tenure arithmetic from merged data.
+Stage 3 (refinement):  ValidatorAgent re-extracts jobs that came back short.
+Stage 4 (refinement):  CompletenessAuditorAgent grounds contact/client/project names
+                       against the source text, measures coverage, and recovers missed
+                       content additively.
+
+Stages 3 and 4 improve a result that already exists. When the run is low on
+budget they are skipped and said so in the report, because a resume that is
+slightly less polished beats no resume at all — which is what a blown deadline
+used to produce.
 """
 from __future__ import annotations
 
@@ -19,6 +27,7 @@ from agents import report
 from agents.analytics import AnalyticsAgent
 from agents.auditor import CompletenessAuditorAgent
 from agents.certifications import CertificationsAgent
+from agents.deadline import Deadline, DeadlineExceeded, set_deadline
 from agents.education import EducationAgent
 from agents.personal import PersonalInfoAgent
 from agents.skills import SkillsAgent
@@ -28,6 +37,12 @@ from agents.validator_agent import ValidatorAgent
 from agents.work import WorkExperienceAgent
 
 logger = logging.getLogger(__name__)
+
+# Roughly what each refinement stage needs to finish once started. Measured
+# against the deadline before the stage begins, so a stage never starts work it
+# cannot deliver.
+_VALIDATION_BUDGET_SECONDS = 30.0
+_AUDIT_BUDGET_SECONDS = 20.0
 
 
 # Agent class name -> the name the user sees when a section did not come through.
@@ -51,10 +66,14 @@ def _unwrap(result: Any, default: Any, agent_name: str) -> Any:
     """
     if isinstance(result, Exception):
         logger.warning("[Orchestrator] %s failed: %s", agent_name, result)
+        ran_out_of_time = isinstance(result, DeadlineExceeded)
         report.record(
             _SECTION_LABELS.get(agent_name, agent_name),
             report.Status.FAILED,
             detail=(
+                "This section was still being read when the run ran out of time, "
+                "so it is empty here. Upload the file again to get it."
+                if ran_out_of_time else
                 "This section could not be extracted, so it is empty here even "
                 "if the resume has one. Add it by hand, or run the file again."
             ),
@@ -77,24 +96,47 @@ class ResumeOrchestrator:
         self.validator_agent   = ValidatorAgent()
         self.auditor_agent     = CompletenessAuditorAgent()
 
-    async def run(self, normalized_text: str) -> dict:
-        # ── Stage 1: Structure discovery ──────────────────────────────────
-        logger.info("[Orchestrator] Stage 1 — structure discovery")
-        structure = await self.structure_agent.run(normalized_text)
-        job_count = len(structure.get("jobs", []))
-        logger.info("[Orchestrator] Found %d job(s) in structure map", job_count)
+    async def run(self, normalized_text: str, deadline: Deadline | None = None) -> dict:
+        deadline = deadline or Deadline.unlimited()
+        set_deadline(deadline)
 
-        # ── Stage 2: Parallel section extraction ──────────────────────────
-        logger.info("[Orchestrator] Stage 2 — parallel extraction")
+        # ── Stage 1: one wave, not two ────────────────────────────────────
+        #
+        # Structure discovery reads the whole document to find job boundaries,
+        # and work extraction genuinely cannot begin until it has. The other
+        # five agents read the same document for entirely different things and
+        # never look at the structure map — yet they used to sit behind it,
+        # adding a full round trip to every single extraction for nothing.
+        logger.info("[Orchestrator] Stage 1 — structure discovery + section extraction")
+        structure_task = asyncio.create_task(self.structure_agent.run(normalized_text))
+
+        async def work_when_structured() -> list[dict]:
+            structure = await structure_task
+            logger.info(
+                "[Orchestrator] Found %d job(s) in structure map", len(structure.get("jobs", []))
+            )
+            return await self.work_agent.run(normalized_text, structure)
+
         raw_results = await asyncio.gather(
             self.personal_agent.run(normalized_text),
-            self.work_agent.run(normalized_text, structure),
+            work_when_structured(),
             self.education_agent.run(normalized_text),
             self.skills_agent.run(normalized_text),
             self.cert_agent.run(normalized_text),
             self.supp_agent.run(normalized_text),
             return_exceptions=True,  # never let one agent failure kill all results
         )
+
+        # Always resolved by now — work_when_structured awaited it, and gather
+        # waits for every branch. Reading it here keeps the map available to the
+        # validation stage even when work extraction itself failed.
+        try:
+            structure = structure_task.result()
+        except Exception as exc:  # a missing map degrades the run, never fails it
+            logger.warning("[Orchestrator] Structure discovery failed: %s", exc)
+            structure = {"jobs": []}
+        if not isinstance(structure, dict):
+            structure = {"jobs": []}
 
         personal_raw  = _unwrap(raw_results[0], {}, "PersonalInfoAgent")
         work_result   = _unwrap(raw_results[1], [], "WorkExperienceAgent")
@@ -133,8 +175,10 @@ class ResumeOrchestrator:
                 if has_content or existing_empty:
                     merged[key] = val
 
-        # ── Stage 3: Analytics ────────────────────────────────────────────
-        logger.info("[Orchestrator] Stage 3 — analytics")
+        # ── Stage 2: Analytics ────────────────────────────────────────────
+        # Pure arithmetic over the dates already extracted — no model call, so
+        # no budget check.
+        logger.info("[Orchestrator] Stage 2 — analytics")
         try:
             analytics = await self.analytics_agent.run(merged)
             merged["analytics"] = analytics
@@ -142,20 +186,38 @@ class ResumeOrchestrator:
             logger.warning("[Orchestrator] Analytics failed: %s", exc)
             merged["analytics"] = {}
 
-        # ── Stage 4: Validation + re-extraction ───────────────────────────
-        logger.info("[Orchestrator] Stage 4 — validation")
-        try:
-            merged = await self.validator_agent.run(merged, normalized_text, structure)
-        except Exception as exc:
-            logger.warning("[Orchestrator] Validation pass failed: %s", exc)
+        # ── Stage 3: Validation + re-extraction ───────────────────────────
+        if deadline.allows(_VALIDATION_BUDGET_SECONDS):
+            logger.info("[Orchestrator] Stage 3 — validation (%.0fs left)", deadline.remaining())
+            try:
+                merged = await self.validator_agent.run(merged, normalized_text, structure)
+            except Exception as exc:
+                logger.warning("[Orchestrator] Validation pass failed: %s", exc)
+        else:
+            logger.warning("[Orchestrator] Stage 3 — validation skipped, out of budget")
+            report.record(
+                "Validation",
+                report.Status.SKIPPED,
+                detail=(
+                    "The bullet-count re-check did not run — this resume took long "
+                    "enough to read that there was no time left for it. The work "
+                    "history is here; compare it against the original."
+                ),
+            )
 
-        # ── Stage 5: Completeness audit ───────────────────────────────────
+        # ── Stage 4: Completeness audit ───────────────────────────────────
         # Grounds hallucination-prone values against the source text, measures
         # how much of the resume actually made it into the JSON, and recovers
         # any missed content additively. Never fails the request.
-        logger.info("[Orchestrator] Stage 5 — completeness audit")
+        #
+        # This stage always runs: its groundedness pass is what strips invented
+        # metrics and unnamed technologies, and that guard is not optional at any
+        # speed. Only the LLM-backed recovery call inside it yields to the clock.
+        logger.info("[Orchestrator] Stage 4 — completeness audit")
         try:
-            merged = await self.auditor_agent.run(merged, normalized_text)
+            merged = await self.auditor_agent.run(
+                merged, normalized_text, allow_recovery=deadline.allows(_AUDIT_BUDGET_SECONDS)
+            )
         except Exception as exc:
             logger.warning("[Orchestrator] Completeness audit failed: %s", exc)
 
@@ -169,10 +231,11 @@ class ResumeOrchestrator:
         # Final sanity log
         we = merged.get("work_experience", [])
         logger.info(
-            "[Orchestrator] Final result: %d job(s), summary=%s, degraded=%s",
+            "[Orchestrator] Final result: %d job(s), summary=%s, degraded=%s, %.0fs of budget unused",
             len(we),
             "present" if merged.get("professional_summary") else "absent",
             run_report.degraded if run_report else "unknown",
+            deadline.remaining(),
         )
 
         return merged

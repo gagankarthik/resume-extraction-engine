@@ -13,9 +13,9 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
-  # ── Lint ─────────────────────────────────────────────────────────────────────
-  lint:
-    name: Lint
+  # ── Lint + tests ─────────────────────────────────────────────────────────────
+  check:
+    name: Lint and test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -31,10 +31,22 @@ jobs:
       - run: pip install ruff==0.16.0
       - run: ruff check .
 
+      # The suite gates the deploy as well as the lint. It covers the parts of
+      # this service whose failures are silent — a two-column resume read as one,
+      # a pipeline that returns nothing when it runs out of time, an audit that
+      # deletes a section it failed to recognise. None of that shows up in a
+      # lint pass, and all of it has reached production before.
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pytest
+      - name: Run tests
+        run: python -m pytest tests -q
+
   # ── Build + Deploy (main only) ────────────────────────────────────────────────
   deploy:
     name: Deploy via Terraform
-    needs: lint
+    needs: check
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
 
@@ -68,7 +80,7 @@ jobs:
           rsync -a --exclude='package' --exclude='.github' \
                    --exclude='terraform' --exclude='__pycache__' \
                    --exclude='*.pyc' --exclude='.env' --exclude='.git' \
-                   --exclude='*.md' . ./package/
+                   --exclude='tests' --exclude='*.md' . ./package/
           cd package && zip -r ../lambda.zip . -x "*.pyc" -x "__pycache__/*"
           echo "Zip size: $(du -sh ../lambda.zip | cut -f1)"
 

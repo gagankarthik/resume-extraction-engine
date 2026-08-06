@@ -7,9 +7,14 @@ from __future__ import annotations
 import asyncio
 import logging
 
-from .base import BaseAgent
+from .base import BaseAgent, output_budget
+from .deadline import get_deadline
 
 logger = logging.getLogger(__name__)
+
+# A retry pass re-runs the failed jobs from scratch. Worth starting only with
+# enough budget left to actually finish one.
+_RETRY_BUDGET_SECONDS = 25.0
 
 WORK_SYSTEM_BASE = """You are a work experience extraction specialist. Extract the work experience for ONE specific job entry from the resume.
 
@@ -136,7 +141,12 @@ class WorkExperienceAgent(BaseAgent):
                 results[i] = res
 
         # Retry pass for any failures
-        if retry_indices:
+        if retry_indices and not get_deadline().allows(_RETRY_BUDGET_SECONDS):
+            logger.warning(
+                "[WorkExperienceAgent] %d job(s) failed but there is no budget to retry them",
+                len(retry_indices),
+            )
+        elif retry_indices:
             logger.info("[WorkExperienceAgent] Retrying %d failed job(s)", len(retry_indices))
             retry_pass = await asyncio.gather(
                 *[self._extract_single_job(text, jobs_meta[i]) for i in retry_indices],
@@ -232,8 +242,12 @@ class WorkExperienceAgent(BaseAgent):
             "Return ONLY the JSON for this single job entry."
         )
 
+        # Sized to the segment rather than fixed at 6144. A long consulting role
+        # with thirty bullets overran that ceiling, and the recovery for
+        # overrunning it is to generate the whole job again with twice the room —
+        # so the slowest jobs on the resume were the ones being done twice.
         result = await self._call_llm_json(
-            system, user_msg, max_tokens=6144,
+            system, user_msg, max_tokens=output_budget(context_text, floor=6144),
             section="Work experience",
         )
 
@@ -261,7 +275,8 @@ class WorkExperienceAgent(BaseAgent):
         logger.info("[WorkExperienceAgent] No structure map — falling back to full-document extraction")
         user_msg = f"=== RESUME TEXT ===\n{text}\n=== END ===\n\nExtract all work experience. Return only JSON."
         result = await self._call_llm_json(
-            WORK_SYSTEM_FULL_FALLBACK, user_msg, max_tokens=16384,
+            WORK_SYSTEM_FULL_FALLBACK, user_msg,
+            max_tokens=output_budget(text, floor=8192, ceiling=24576),
             section="Work experience",
         )
         if isinstance(result, list):

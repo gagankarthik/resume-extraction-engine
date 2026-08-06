@@ -57,6 +57,7 @@ class LLMProvider(Protocol):
         max_tokens: int,
         temperature: float,
         json_mode: bool,
+        timeout: float | None = None,
     ) -> Completion: ...
 
 
@@ -94,6 +95,7 @@ class OpenAIProvider:
         max_tokens: int,
         temperature: float,
         json_mode: bool,
+        timeout: float | None = None,
     ) -> Completion:
         model = self.settings.openai_model
         kwargs: dict[str, Any] = {
@@ -107,6 +109,10 @@ class OpenAIProvider:
         }
         if json_mode:
             kwargs["response_format"] = {"type": "json_object"}
+        # The SDK's own default is ten minutes, long enough for one stalled
+        # request to outlast the entire run.
+        if timeout is not None and timeout != float("inf"):
+            kwargs["timeout"] = timeout
 
         resp = await self._get_client().chat.completions.create(**kwargs)
         choice = resp.choices[0]
@@ -161,8 +167,12 @@ class AnthropicProvider:
         max_tokens: int,
         temperature: float,
         json_mode: bool,
+        timeout: float | None = None,
     ) -> Completion:
         model = self.settings.anthropic_model
+        extra: dict[str, Any] = {}
+        if timeout is not None and timeout != float("inf"):
+            extra["timeout"] = timeout
 
         resp = await self._get_client().messages.create(
             model=model,
@@ -170,6 +180,7 @@ class AnthropicProvider:
             temperature=temperature,
             system=[{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}],
             messages=[{"role": "user", "content": self._with_cache_breakpoint(user)}],
+            **extra,
         )
 
         return Completion(

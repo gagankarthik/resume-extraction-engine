@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from .base import BaseAgent
+from .sections import EDUCATION, slice_matching
 
 EDUCATION_SYSTEM = """Extract ALL education entries from the resume.
 
@@ -37,7 +38,12 @@ class EducationAgent(BaseAgent):
         super().__init__("EducationAgent")
 
     async def run(self, text: str) -> list[dict]:
-        user_msg = f"=== RESUME ===\n{text}\n=== END ===\n\nExtract education. Return JSON."
+        # The education section when the resume marks one out, the whole
+        # document when it does not. Reading only the relevant block is both
+        # cheaper and stricter: a degree cannot be assembled out of a job
+        # description that is no longer in front of the model.
+        scoped = slice_matching(text, EDUCATION) or text
+        user_msg = f"=== RESUME ===\n{scoped}\n=== END ===\n\nExtract education. Return JSON."
         result = await self._call_llm_json(
             EDUCATION_SYSTEM, user_msg, max_tokens=3072,
             section="Education",

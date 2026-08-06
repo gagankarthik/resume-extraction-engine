@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from .base import BaseAgent
+from .sections import CERTIFICATION, slice_matching
 
 CERT_SYSTEM = """Extract certifications, licenses, and certificates from the resume.
 
@@ -28,7 +29,18 @@ class CertificationsAgent(BaseAgent):
         super().__init__("CertificationsAgent")
 
     async def run(self, text: str) -> list[dict]:
-        user_msg = f"=== RESUME ===\n{text}\n=== END ===\n\nExtract certifications. Return JSON."
+        # This agent's entire rule is "only from a dedicated certifications
+        # section", which the prompt could ask for but not guarantee — and when
+        # it slipped, a job responsibility mentioning "certified" came back as a
+        # credential. Finding the section here settles it: no section, no call,
+        # no certifications. The audit stage already strips certifications from
+        # a resume with no such heading, so this reaches the same answer without
+        # spending a request to get there.
+        scoped = slice_matching(text, CERTIFICATION)
+        if scoped is None:
+            return []
+
+        user_msg = f"=== RESUME ===\n{scoped}\n=== END ===\n\nExtract certifications. Return JSON."
         result = await self._call_llm_json(
             CERT_SYSTEM, user_msg, max_tokens=2048,
             section="Certifications",

@@ -24,11 +24,27 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from agents import report
+from agents.deadline import DeadlineExceeded, get_deadline
 from agents.json_salvage import UnsalvageableJSON, count_items, salvage
 from agents.llm.providers import Completion, LLMProvider, build_provider
 from config import LLMSettings, get_settings
 
 logger = logging.getLogger(__name__)
+
+# A retry is speculative: the first attempt already failed, and a second costs
+# the same again. Worth starting only with room to see it through.
+#
+# There is deliberately no equivalent floor on the FIRST attempt. A section's
+# first call is the run's actual work, and any threshold high enough to refuse
+# it turns a tight budget into an empty resume — the exact failure this layer
+# exists to prevent. The primary attempt is made whenever the clock has not
+# already run out, bounded by the per-call timeout below; if that leaves it only
+# a moment, it fails as one section rather than as the whole extraction.
+_MIN_RETRY_SECONDS = 8.0
+
+# A re-ask after a truncated response regenerates the whole section from
+# scratch, so it needs the most room of all.
+_MIN_ESCALATION_SECONDS = 25.0
 
 
 # ── Token accounting ──────────────────────────────────────────────────────
@@ -114,8 +130,20 @@ class LLMClient:
         json_mode: bool = True,
     ) -> Completion:
         last_exc: Exception | None = None
+        deadline = get_deadline()
 
         for attempt in range(self.settings.transport_retries + 1):
+            # Checked before the slot is taken, so a run that is out of time
+            # stops holding capacity other requests could be using.
+            if deadline.expired():
+                raise DeadlineExceeded(
+                    f"[{label}] skipped — the run ran out of time before this call started."
+                )
+
+            # Two ceilings, whichever is nearer: one call may not outlast the
+            # run, and no call may hang indefinitely inside a healthy run.
+            timeout = min(float(self.settings.call_timeout_seconds), deadline.remaining())
+
             try:
                 async with self._sem():
                     completion = await self.provider.complete(
@@ -124,6 +152,7 @@ class LLMClient:
                         max_tokens=max_tokens,
                         temperature=temperature,
                         json_mode=json_mode,
+                        timeout=timeout,
                     )
                 _record_usage(completion)
 
@@ -135,12 +164,28 @@ class LLMClient:
             except TruncatedCompletion:
                 raise  # not a transport problem; the caller decides what to do
 
+            except asyncio.CancelledError:
+                raise  # the run itself is being torn down
+
             except Exception as exc:
                 last_exc = exc
                 if attempt >= self.settings.transport_retries:
                     break
+
                 wait = _retry_after(exc)
-                wait = wait + 0.1 * (attempt + 1) if wait is not None else min(30.0, 2**attempt)
+                # Capped at 8s rather than 30s. The old ceiling meant a single
+                # rate-limited call could sleep through half a minute of a
+                # budget measured in a couple of them.
+                wait = wait + 0.1 * (attempt + 1) if wait is not None else min(8.0, 2**attempt)
+
+                # Sleeping past the point where the retry could still complete
+                # burns the remaining budget and answers nothing.
+                if not deadline.allows(wait + _MIN_RETRY_SECONDS):
+                    logger.warning(
+                        "[%s] attempt %d failed (%s) — no budget left to retry", label, attempt + 1, exc
+                    )
+                    break
+
                 logger.warning(
                     "[%s] attempt %d/%d failed (%s) — retrying in %.2fs",
                     label, attempt + 1, self.settings.transport_retries + 1, exc, wait,
@@ -180,6 +225,12 @@ class LLMClient:
             except TruncatedCompletion as exc:
                 truncation = exc
                 if budget >= self.settings.max_output_tokens:
+                    break
+                # Re-asking regenerates the section from nothing. With little
+                # budget left, the complete records already in hand are worth
+                # more than a second attempt that will not finish either.
+                if not get_deadline().allows(_MIN_ESCALATION_SECONDS):
+                    logger.warning("[%s] cut off — keeping what parsed rather than re-asking", label)
                     break
                 budget = min(budget * 2, self.settings.max_output_tokens)
                 logger.warning("[%s] cut off — re-asking with %d tokens", label, budget)

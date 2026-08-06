@@ -24,7 +24,8 @@ import os
 import re
 from typing import Any
 
-from .base import BaseAgent
+from .base import BaseAgent, output_budget
+from .sections import heading_text
 
 logger = logging.getLogger(__name__)
 
@@ -652,22 +653,16 @@ _CERTIFICATION_HEADING = re.compile(
 def _heading_text(line: str) -> str | None:
     """The line's heading text, or None when it does not read as a heading.
 
-    A heading is short, unpunctuated, and either fully capitalised or a name we
-    recognise. Resumes label sections in every style, so this stays lenient on
-    case and trailing colons and strict on length.
+    Shares its rule with section routing, but deliberately not its vocabulary.
+    A missed heading here deletes a whole section of the output, so only these
+    three names are recognised beyond plain capitalisation — the longer list
+    routing uses would start matching headings inside body text and cut real
+    content out of the result.
     """
-    s = (line or "").strip().lstrip("•").strip().rstrip(":").strip()
-    if not s or len(s) > 60 or len(s.split()) > 6 or s.endswith("."):
-        return None
-    letters = [c for c in s if c.isalpha()]
-    if not letters:
-        return None
-    if all(c.isupper() for c in letters):
-        return s
-    if (_DROPPED_SECTION_HEADING.search(s) or _EXPERIENCE_HEADING.search(s)
-            or _CERTIFICATION_HEADING.search(s)):
-        return s
-    return None
+    return heading_text(
+        line,
+        (_DROPPED_SECTION_HEADING, _EXPERIENCE_HEADING, _CERTIFICATION_HEADING),
+    )
 
 
 def has_section(raw_text: str, pattern: re.Pattern[str]) -> bool:
@@ -906,7 +901,15 @@ class CompletenessAuditorAgent(BaseAgent):
     def __init__(self):
         super().__init__("CompletenessAuditorAgent")
 
-    async def run(self, merged: dict, raw_text: str) -> dict:
+    async def run(self, merged: dict, raw_text: str, *, allow_recovery: bool = True) -> dict:
+        """Ground, measure, and — when the run can still afford it — recover.
+
+        `allow_recovery` gates only the model call at the end. Everything before
+        it is deterministic and runs regardless: the groundedness pass is what
+        strips invented metrics and technologies the resume never named, and a
+        fabricated figure on a submitted resume is not a cost worth trading for
+        a faster response.
+        """
         report: dict[str, Any] = {"warnings": [], "recovered": {}}
         try:
             merged, warnings = ground_check(merged, raw_text)
@@ -920,7 +923,15 @@ class CompletenessAuditorAgent(BaseAgent):
             report["coverage_percent"] = coverage
             report["missed_line_count"] = len(missed)
 
-            recovery_enabled = os.getenv("ENABLE_AUDIT_RECOVERY", "true").lower() in ("1", "true", "yes")
+            recovery_enabled = (
+                allow_recovery
+                and os.getenv("ENABLE_AUDIT_RECOVERY", "true").lower() in ("1", "true", "yes")
+            )
+            if missed and not allow_recovery:
+                report["warnings"].append(
+                    f"{len(missed)} line(s) were not matched to a field, and there was no "
+                    "time left to sort them — check the resume against the original"
+                )
             # Recovery used to require two or more missed lines, which meant the
             # single-line gap — the most common one, and the one a reviewer
             # actually reads on a 99.3% report — was never even attempted. One
@@ -966,7 +977,8 @@ class CompletenessAuditorAgent(BaseAgent):
             "Classify the missed content. Return JSON."
         )
         result = await self._call_llm_json(
-            RECOVERY_SYSTEM, user_msg, max_tokens=6144,
+            RECOVERY_SYSTEM, user_msg,
+            max_tokens=output_budget("\n".join(missed_lines), floor=4096, ceiling=8192),
             section="Content recovery",
         )
         if isinstance(result, dict):

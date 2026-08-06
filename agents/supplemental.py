@@ -10,7 +10,8 @@ discarded downstream.
 """
 from __future__ import annotations
 
-from .base import BaseAgent
+from .base import BaseAgent, output_budget
+from .sections import EXPERIENCE, slice_excluding
 
 SUPP_SYSTEM = """Extract all supplemental sections from the resume. Return ONLY this JSON (use [] for missing arrays, null for missing scalars):
 
@@ -46,8 +47,16 @@ class SupplementalAgent(BaseAgent):
         super().__init__("SupplementalAgent")
 
     async def run(self, text: str) -> dict:
-        user_msg = f"=== RESUME ===\n{text}\n=== END ===\n\nExtract all supplemental sections. Return JSON."
+        # Everything this agent wants lives outside the work history, which is
+        # usually most of the document by volume. Dropping it leaves a much
+        # smaller read and takes with it the standing temptation to lift a job's
+        # bullets into projects[] — the one thing the prompt above says twice
+        # not to do. A summary-shaped heading is kept even when it matches, so
+        # "EXPERIENCE SUMMARY" does not take the summary out with the jobs.
+        scoped = slice_excluding(text, EXPERIENCE)
+        user_msg = f"=== RESUME ===\n{scoped}\n=== END ===\n\nExtract all supplemental sections. Return JSON."
         return await self._call_llm_json(
-            SUPP_SYSTEM, user_msg, max_tokens=10240,
+            SUPP_SYSTEM, user_msg,
+            max_tokens=output_budget(scoped, floor=8192, ceiling=16384),
             section="Additional sections",
         )

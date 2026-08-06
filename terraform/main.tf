@@ -92,8 +92,12 @@ resource "aws_lambda_function" "api" {
   description = "Resume extraction engine — State Format Tool (multi-agent LLM pipeline). Called by the frontend at hire.oceanbluecorp.com."
   handler     = "handler.handler"
   runtime     = "python3.11"
-  timeout     = 900 # 15 min — multi-agent LLM pipeline takes 30-90s
-  memory_size = 1024
+  timeout = 300 # 5 min — the pipeline budgets itself to 150s; this is the backstop
+  # The pipeline is I/O-bound on the model API, but Lambda scales CPU with
+  # memory, and CPU is what runs the event loop driving a dozen concurrent
+  # calls plus the deterministic audit passes over the whole document. At 1024
+  # MB that loop was itself a bottleneck.
+  memory_size = 2048
 
   s3_bucket        = aws_s3_bucket.packages.id
   s3_key           = aws_s3_object.zip.key
@@ -109,12 +113,21 @@ resource "aws_lambda_function" "api" {
       USE_ORCHESTRATOR  = var.use_orchestrator
       MAX_FILE_SIZE_MB  = "20"
 
-      # The pipeline's own limit, which defaults to 360s and was never set here.
-      # A dense 2,700-word resume measured 624s on an otherwise idle machine, so
-      # the default failed real files while the function it runs in was allowed
-      # 900. Kept under the Lambda timeout so the pipeline gives up first and
-      # returns an explanation, rather than the runtime killing it mid-flight.
-      EXTRACTION_TIMEOUT_SECONDS = "840"
+      # What the person who uploaded the file will actually wait. This used to
+      # be 840s, which is not a wait anyone sits through — it was raised to that
+      # because dense resumes were measuring 624s, and the reason they measured
+      # 624s was that LLM_MAX_CONCURRENT defaulted to 2, turning every parallel
+      # stage into a queue two deep. With that fixed the same resumes finish in
+      # well under a minute, and this is now a budget the pipeline spends down:
+      # refinement stages drop out as it runs low and the resume still returns.
+      EXTRACTION_TIMEOUT_SECONDS = "150"
+
+      # In-flight model calls. The value that makes the pipeline parallel in
+      # fact and not just in shape.
+      LLM_MAX_CONCURRENT = "12"
+
+      # No single call may stall the run. The SDK default is ten minutes.
+      LLM_CALL_TIMEOUT_SECONDS = "90"
 
       # Uploads are refused without this. It is the only thing between a public
       # Function URL and an open ten-agent GPT pipeline — see auth.py.

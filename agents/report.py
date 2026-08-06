@@ -31,6 +31,12 @@ class Status(str, Enum):
     FAILED = "failed"
     """Produced nothing usable. The section is empty because of an error."""
 
+    SKIPPED = "skipped"
+    """A refinement pass the run had no time left for.
+
+    Distinct from FAILED on purpose: nothing was lost, it simply was not
+    double-checked. The extraction stands; the extra verification does not."""
+
 
 @dataclass
 class SectionOutcome:
@@ -80,6 +86,9 @@ class ExtractionReport:
             ],
             "partial_sections": [
                 s.section for s in self.sections if s.status == Status.PARTIAL
+            ],
+            "skipped_sections": [
+                s.section for s in self.sections if s.status == Status.SKIPPED
             ],
         }
 

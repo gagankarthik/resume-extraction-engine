@@ -17,7 +17,24 @@ from agents.llm import get_client, get_token_usage, reset_token_usage
 logger = logging.getLogger(__name__)
 
 # Re-exported so existing callers (processor.py) keep working unchanged.
-__all__ = ["BaseAgent", "get_token_usage", "reset_token_usage"]
+__all__ = ["BaseAgent", "get_token_usage", "output_budget", "reset_token_usage"]
+
+
+def output_budget(source: str, *, floor: int = 4096, ceiling: int = 16384) -> int:
+    """Room to copy `source` back out as JSON, with scaffolding to spare.
+
+    Extraction is near-verbatim, so a section's answer is about as long as the
+    text it reads. Guessing low is expensive in a way guessing high is not: a
+    response that runs out of room is re-asked from scratch with double the
+    budget, so one bad guess costs an entire extra generation — and on a long
+    resume that was happening on the longest jobs, the ones already slowest.
+    Providers bill for tokens generated, not for the ceiling requested, so the
+    only cost of a generous budget is that it must stay under the model's own.
+
+    Roughly four characters per token, times 1.6 for JSON keys, quoting and
+    escaping, plus a fixed allowance for the object's fields.
+    """
+    return max(floor, min(ceiling, int(len(source) / 4 * 1.6) + 768))
 
 
 class BaseAgent:

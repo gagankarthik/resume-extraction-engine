@@ -40,11 +40,25 @@ class LLMSettings:
     anthropic_model: str
 
     max_concurrent: int
-    """In-flight LLM calls across the whole pipeline. Keeps a long resume with
-    many jobs from firing enough parallel calls to trip a provider rate limit."""
+    """In-flight LLM calls across the whole pipeline.
+
+    This is the pipeline's throughput, not a safety valve. It used to be 2,
+    which quietly turned every parallel stage into a queue two deep: a resume
+    with twelve jobs issues around thirty model calls, and thirty calls two at a
+    time is fifteen sequential round trips — the difference between a minute and
+    a quarter of an hour. Rate limits are already handled properly one layer
+    down, where a 429 is retried with the provider's own backoff hint, so
+    throttling here bought nothing that layer wasn't already buying."""
 
     max_output_tokens: int
     """Ceiling for a single completion. Truncation escalation stops here."""
+
+    call_timeout_seconds: int
+    """Wall-clock ceiling for one model call.
+
+    Without it a single stalled request holds a concurrency slot until the SDK's
+    own timeout — ten minutes, by default — and takes the whole run down with
+    it. A call that has not answered in this long is not going to."""
 
     transport_retries: int
     """Retries for network errors and rate limits, per call."""
@@ -92,13 +106,18 @@ def get_settings() -> Settings:
             provider=provider_raw,  # type: ignore[arg-type]
             openai_model=os.getenv("OPENAI_MODEL", "gpt-4.1-mini"),
             anthropic_model=os.getenv("ANTHROPIC_MODEL", "claude-opus-4-7"),
-            max_concurrent=_int("LLM_MAX_CONCURRENT", 2),
+            max_concurrent=_int("LLM_MAX_CONCURRENT", 12),
             max_output_tokens=_int("LLM_MAX_OUTPUT_TOKENS", 32000),
-            transport_retries=_int("LLM_TRANSPORT_RETRIES", 5),
+            call_timeout_seconds=_int("LLM_CALL_TIMEOUT_SECONDS", 90),
+            transport_retries=_int("LLM_TRANSPORT_RETRIES", 3),
             truncation_escalations=_int("LLM_TRUNCATION_ESCALATIONS", 2),
         ),
         use_orchestrator=_bool("USE_ORCHESTRATOR", True),
-        extraction_timeout_seconds=_int("EXTRACTION_TIMEOUT_SECONDS", 360),
+        # What someone waiting on an upload will actually sit through. The
+        # pipeline treats this as a budget rather than a fuse: refinement stages
+        # drop out as it runs low, so the number is the longest the caller waits,
+        # not the point at which their resume is thrown away.
+        extraction_timeout_seconds=_int("EXTRACTION_TIMEOUT_SECONDS", 150),
         max_file_mb=_int("MAX_FILE_SIZE_MB", 20),
         log_level=os.getenv("LOG_LEVEL", "INFO").upper(),
         cors_origins=tuple(o.strip() for o in origins.split(",") if o.strip()),

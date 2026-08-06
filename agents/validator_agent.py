@@ -7,9 +7,14 @@ from __future__ import annotations
 import asyncio
 import logging
 
-from .base import BaseAgent
+from .base import BaseAgent, output_budget
 
 logger = logging.getLogger(__name__)
+
+# One re-extraction is one model call. Past this many, the stage stops being a
+# correction pass and becomes a second extraction of the whole resume — at which
+# point the first pass was wrong in a way re-running it will not fix.
+_MAX_REEXTRACTIONS = 6
 
 REEXTRACT_SYSTEM = """Re-extract ONE job entry from the resume. The previous extraction missed some bullet points.
 
@@ -42,13 +47,25 @@ class ValidatorAgent(BaseAgent):
 
         mismatches = self._find_bullet_mismatches(work, jobs_meta)
         if not mismatches:
-            logger.info("[ValidatorAgent] All bullet counts match — no corrections needed")
+            logger.info("[ValidatorAgent] No jobs came back short — no corrections needed")
             return merged
 
-        logger.warning("[ValidatorAgent] %d bullet count mismatch(es) found — re-extracting", len(mismatches))
-        corrected_work = list(work)
+        # Worst first: the job missing six bullets is worth a call in a way the
+        # job missing one is not, and the cap below has to spend itself well.
+        mismatches.sort(key=lambda m: m[2], reverse=True)
+        if len(mismatches) > _MAX_REEXTRACTIONS:
+            logger.warning(
+                "[ValidatorAgent] %d jobs came back short; re-extracting the %d worst",
+                len(mismatches), _MAX_REEXTRACTIONS,
+            )
+            mismatches = mismatches[:_MAX_REEXTRACTIONS]
+        else:
+            logger.warning(
+                "[ValidatorAgent] %d job(s) came back short — re-extracting", len(mismatches)
+            )
 
-        tasks = [(idx, meta) for idx, meta in mismatches]
+        corrected_work = list(work)
+        tasks = [(idx, meta) for idx, meta, _ in mismatches]
         results = await asyncio.gather(
             *[self._reextract_job(raw_text, meta, idx) for idx, meta in tasks],
             return_exceptions=True,
@@ -75,7 +92,7 @@ class ValidatorAgent(BaseAgent):
         # sub-bullets, prose split differently), and dropping a real role is
         # worse than showing it with a slightly off count. We log and keep it.
         remaining_mismatches = self._find_bullet_mismatches(corrected_work, jobs_meta)
-        for idx, meta in remaining_mismatches:
+        for idx, meta, _ in remaining_mismatches:
             logger.warning(
                 "[ValidatorAgent] %s — bullet count still mismatched after re-extraction; keeping best extraction",
                 meta.get("company", f"job {idx}"),
@@ -110,7 +127,23 @@ class ValidatorAgent(BaseAgent):
 
     def _find_bullet_mismatches(
         self, work: list[dict], jobs_meta: list[dict]
-    ) -> list[tuple[int, dict]]:
+    ) -> list[tuple[int, dict, int]]:
+        """Jobs that came back with fewer bullets than the source has, worst first.
+
+        Only a SHORTFALL is worth a model call. This used to fire on any
+        difference in either direction, which meant it fired on most jobs on most
+        resumes — a glyph count and a responsibility count disagree routinely
+        when a bullet wraps onto two lines or a paragraph is counted once and
+        rendered once. Every one of those cost a full re-extraction that could
+        not improve anything, and on a long resume that was a second pass over
+        the entire work history.
+
+        The opposite case, more bullets than the source, is a bullet the model
+        split in two. That is repaired deterministically by merge_split_bullets
+        in the auditor, from the source text itself — no call, no guessing.
+
+        Returns (index, meta, shortfall).
+        """
         mismatches = []
         for i, (job, meta) in enumerate(zip(work, jobs_meta, strict=False)):
             expected = meta.get("bullet_count", 0)
@@ -120,12 +153,13 @@ class ValidatorAgent(BaseAgent):
             # Also count sub-project bullets
             for proj in job.get("projects", []):
                 extracted += len(proj.get("projectResponsibilities", []))
-            if extracted != expected:
+            shortfall = expected - extracted
+            if shortfall > 0:
                 logger.debug(
                     "[ValidatorAgent] %s: expected %d bullets, got %d",
                     meta.get("company", "?"), expected, extracted,
                 )
-                mismatches.append((i, meta))
+                mismatches.append((i, meta, shortfall))
         return mismatches
 
     async def _reextract_job(self, full_text: str, meta: dict, job_idx: int) -> dict | None:
@@ -142,7 +176,7 @@ class ValidatorAgent(BaseAgent):
             "=== END ==="
         )
         result = await self._call_llm_json(
-            system, user_msg, max_tokens=6144,
+            system, user_msg, max_tokens=output_budget(segment, floor=6144),
             section="Validation",
         )
 

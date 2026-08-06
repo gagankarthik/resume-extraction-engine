@@ -7,6 +7,7 @@ import asyncio
 import json
 import logging
 import os
+import time
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -15,11 +16,18 @@ from dotenv import load_dotenv
 
 from agents.auditor import ground_check
 from agents.base import get_token_usage, reset_token_usage
+from agents.deadline import Deadline
 from agents.report import reset_report
+from config import get_settings
 from orchestrator import get_orchestrator
 from validator import validate_resume_json
 
 logger = logging.getLogger(__name__)
+
+# How long past its own budget the orchestrator is allowed to take before the
+# outer guard steps in. Only reachable if a stage ignores the deadline, so it is
+# sized to catch a bug rather than to accommodate slow work.
+_DEADLINE_GRACE_SECONDS = 20
 
 load_dotenv(Path(__file__).parent / ".env", override=True)
 
@@ -439,6 +447,7 @@ async def process_resume(
     """
     word_count = len(raw_text.split())
     request_id = str(uuid.uuid4())
+    started = time.monotonic()
 
     user_message = (
         f"Resume file: {file_name} | {page_count} page(s) | "
@@ -450,24 +459,38 @@ async def process_resume(
     )
 
     # ── Choose engine: multi-agent orchestrator (default) or single-shot ──
-    use_orchestrator = os.getenv("USE_ORCHESTRATOR", "true").lower() in ("1", "true", "yes")
-    timeout_secs = int(os.getenv("EXTRACTION_TIMEOUT_SECONDS", "360"))
+    settings = get_settings()
+    use_orchestrator = settings.use_orchestrator
+    timeout_secs = settings.extraction_timeout_seconds
 
     if use_orchestrator:
         orchestrator = get_orchestrator()
         usage_acc = reset_token_usage()
         reset_report()
+
+        # A budget, not a fuse. The orchestrator spends it stage by stage and
+        # returns whatever it has when it runs low, so a slow resume comes back
+        # with a warning attached instead of coming back as an error — which is
+        # what the old blanket wait_for did, discarding every stage that had
+        # already succeeded and charging for all of them.
+        #
+        # wait_for still wraps it, but as a backstop against a bug in the budget
+        # logic rather than as the normal path. The grace period is what makes
+        # that true: the orchestrator always gives up first.
+        deadline = Deadline.in_seconds(timeout_secs)
         try:
-            extracted = await asyncio.wait_for(orchestrator.run(raw_text), timeout=timeout_secs)
+            extracted = await asyncio.wait_for(
+                orchestrator.run(raw_text, deadline), timeout=timeout_secs + _DEADLINE_GRACE_SECONDS
+            )
         except asyncio.TimeoutError as exc:
             raise ValueError(
-                f"Extraction timed out after {timeout_secs}s. "
-                "The resume may be unusually long — try splitting it or increasing EXTRACTION_TIMEOUT_SECONDS."
+                f"Extraction could not finish within {timeout_secs}s and had to stop. "
+                "Please try uploading the file again."
             ) from exc
         total = get_token_usage() or usage_acc
         llm_info = {
             "provider": "orchestrator",
-            "model": os.getenv("OPENAI_MODEL", "gpt-4.1-mini"),
+            "model": settings.llm.model,
             "usage": {
                 "input_tokens":  total.get("input_tokens", 0),
                 "output_tokens": total.get("output_tokens", 0),
@@ -521,6 +544,9 @@ async def process_resume(
         "extraction_method": extraction_info.get("method"),
         "sparse_pages":      extraction_info.get("sparse_pages", []),
         "timestamp":         datetime.now(timezone.utc).isoformat(),
+        # Recorded on every response so a slow resume is a number in the logs
+        # rather than a support ticket describing one.
+        "duration_seconds":  round(time.monotonic() - started, 1),
         **({"client_id":  client_id}  if client_id  else {}),
         **({"project_id": project_id} if project_id else {}),
         **llm_info,

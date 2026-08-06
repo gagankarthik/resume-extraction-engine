@@ -11,10 +11,10 @@ Resume text extraction — no OCR dependency.
 All paths run through normalizer.py before returning.
 """
 import io
+import math
 import zipfile
 from xml.etree import ElementTree as ET
 
-import pdfplumber
 from docx import Document
 from docx.oxml.ns import qn
 from docx.table import Table as DocxTable
@@ -27,6 +27,109 @@ from normalizer import deduplicate_page_content, normalize_text
 _SPARSE_THRESHOLD = 50
 
 ExtractionResult = tuple[str, int, dict]
+
+
+# ------------------------------------------------------------------ #
+# Column detection
+# ------------------------------------------------------------------ #
+#
+# A two-column resume read as one column is not slightly wrong, it is unusable.
+# pdfplumber's layout mode pads text to its x-position, so a sidebar line and a
+# body line share one output line:
+#
+#     Kubernetes                          • Built the ingestion pipeline
+#
+# The normalizer then collapses the padding to a single space and the skill is
+# welded onto the front of somebody's job bullet. Worse, the bullet glyph is no
+# longer at the start of the line, so the programmatic bullet count comes back 0
+# — and a job with zero expected bullets is skipped by the validator entirely.
+# The accuracy checks switch themselves off on exactly the layouts that need
+# them most, and nothing in the output says so.
+#
+# The fix is to find the gutter and read each column on its own.
+
+# Narrower gaps than this are word spacing or a right-aligned date, not a gutter.
+_MIN_GUTTER_POINTS = 14
+
+# Each column must hold a real share of the page. Without this, the whitespace
+# before a right-aligned date column ("Acme Corp        2019 - Present") reads as
+# a gutter and the page is split down a seam that isn't there.
+_MIN_COLUMN_WORD_SHARE = 0.15
+
+# ...and span enough lines to be a column rather than a heading that happens to
+# sit alone on its side of the page.
+_MIN_COLUMN_LINES = 4
+
+# A gutter near the edge of the text block is a margin artefact.
+_INTERIOR_MARGIN = 0.15
+
+
+def detect_column_bands(words: list[dict]) -> list[tuple[float, float]] | None:
+    """The x-ranges of the page's columns, or None if it reads as one column.
+
+    Works from word boxes rather than rendered text: a gutter is a vertical
+    strip that no word on the page crosses. That test is what keeps ordinary
+    single-column resumes intact — a bullet line runs the full width of the text
+    block, so it crosses any candidate seam and rules it out, while the gap in
+    front of a right-aligned date does not extend down the page.
+
+    `words` are pdfplumber word dicts (x0, x1, top). Kept pure and separate from
+    the page object so the rule can be tested without rendering a PDF.
+    """
+    if len(words) < 20:
+        return None
+
+    left = min(w["x0"] for w in words)
+    right = max(w["x1"] for w in words)
+    width = right - left
+    if width <= 0:
+        return None
+
+    # One bin per point, marked where any word sits.
+    bins = math.ceil(width) + 1
+    occupied = bytearray(bins)
+    for w in words:
+        start = max(0, int(w["x0"] - left))
+        end = min(bins - 1, math.ceil(w["x1"] - left))
+        for i in range(start, end + 1):
+            occupied[i] = 1
+
+    gutters: list[tuple[int, int]] = []
+    i = 0
+    while i < bins:
+        if occupied[i]:
+            i += 1
+            continue
+        j = i
+        while j < bins and not occupied[j]:
+            j += 1
+        if j - i >= _MIN_GUTTER_POINTS:
+            centre = (i + j) / 2
+            if _INTERIOR_MARGIN * width < centre < (1 - _INTERIOR_MARGIN) * width:
+                gutters.append((i, j))
+        i = j
+
+    if not gutters:
+        return None
+
+    bands: list[tuple[float, float]] = []
+    cursor = left
+    for start, end in gutters:
+        bands.append((cursor, left + start))
+        cursor = left + end
+    bands.append((cursor, right))
+
+    # Every band has to look like a column, or the split is an artefact and the
+    # page is safer read whole.
+    total = len(words)
+    for x0, x1 in bands:
+        in_band = [w for w in words if x0 <= (w["x0"] + w["x1"]) / 2 <= x1]
+        if len(in_band) < _MIN_COLUMN_WORD_SHARE * total:
+            return None
+        if len({round(w["top"]) for w in in_band}) < _MIN_COLUMN_LINES:
+            return None
+
+    return bands
 
 
 # ------------------------------------------------------------------ #
@@ -54,14 +157,22 @@ def extract_text(file_bytes: bytes, file_type: str) -> ExtractionResult:
 # ------------------------------------------------------------------ #
 
 def _extract_pdf(file_bytes: bytes) -> ExtractionResult:
+    # Imported here rather than at module scope: pdfplumber pulls in pdfminer
+    # and Pillow, seconds of cold start on a Lambda that may well have been
+    # handed a DOCX.
+    import pdfplumber
+
     page_texts: list[str | None] = []
     sparse_pages: list[int] = []
+    multi_column_pages: list[int] = []
 
     try:
         with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
             page_count = len(pdf.pages)
             for i, page in enumerate(pdf.pages, start=1):
-                text = _extract_one_pdf_page(page)
+                text, columns = _extract_one_pdf_page(page)
+                if columns > 1:
+                    multi_column_pages.append(i)
                 if len(text.strip()) < _SPARSE_THRESHOLD:
                     sparse_pages.append(i)
                 page_texts.append(text or None)
@@ -93,20 +204,31 @@ def _extract_pdf(file_bytes: bytes) -> ExtractionResult:
     return normalized, page_count, {
         "method": "pdfplumber",
         "sparse_pages": sparse_pages,
+        # Reported so a layout the reader had to take apart is visible when
+        # someone is working out why a particular resume came back oddly.
+        "multi_column_pages": multi_column_pages,
     }
 
 
-def _extract_one_pdf_page(page) -> str:
+def _extract_one_pdf_page(page) -> tuple[str, int]:
     """
-    Extract text from one pdfplumber Page.
-    Uses layout-aware extraction (preserves multi-column order),
-    then appends any table rows not already captured.
-    """
-    # layout=True preserves spatial ordering — crucial for multi-column resumes
-    text = page.extract_text(layout=True, x_tolerance=3, y_tolerance=3) or ""
+    Extract text from one pdfplumber Page, returning (text, column_count).
 
-    if not text.strip():
-        text = page.extract_text() or ""
+    Columns are read one at a time when the page has them. Reading a
+    two-column page in one pass interleaves the sidebar with the body — see
+    detect_column_bands for what that costs — so the gutter is found first and
+    each side is cropped and read on its own, left to right.
+    """
+    columns = _read_columns(page)
+    if columns is not None:
+        text = "\n\n".join(columns)
+        column_count = len(columns)
+    else:
+        # layout=True preserves spatial ordering within a single column
+        text = page.extract_text(layout=True, x_tolerance=3, y_tolerance=3) or ""
+        if not text.strip():
+            text = page.extract_text() or ""
+        column_count = 1
 
     # Explicit table extraction — pdfplumber may miss grid-based tables in layout mode
     table_rows: list[str] = []
@@ -122,7 +244,45 @@ def _extract_one_pdf_page(page) -> str:
         if table_block[:60] not in text:
             text = text + "\n\n" + table_block
 
-    return text.strip()
+    return text.strip(), column_count
+
+
+def _read_columns(page) -> list[str] | None:
+    """Each column's text in reading order, or None if the page has one column.
+
+    Any failure here returns None, which falls back to reading the page whole —
+    the behaviour that shipped before columns were detected at all. A layout
+    this cannot make sense of should degrade to the old result, never to no text.
+    """
+    try:
+        words = page.extract_words(x_tolerance=1.5, y_tolerance=3)
+    except Exception:
+        return None
+
+    bands = detect_column_bands(words)
+    if not bands:
+        return None
+
+    _, top, _, bottom = page.bbox
+    texts: list[str] = []
+    for x0, x1 in bands:
+        try:
+            # A point of margin either side, so a glyph sitting exactly on the
+            # boundary is not clipped in half.
+            crop = page.crop((
+                max(page.bbox[0], x0 - 1),
+                top,
+                min(page.bbox[2], x1 + 1),
+                bottom,
+            ))
+            text = (crop.extract_text(layout=True, x_tolerance=3, y_tolerance=3) or "").strip()
+        except Exception:
+            return None
+        if text:
+            texts.append(text)
+
+    # One column's worth of text means the split found nothing worth having.
+    return texts if len(texts) > 1 else None
 
 
 # ------------------------------------------------------------------ #
