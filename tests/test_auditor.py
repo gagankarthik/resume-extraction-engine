@@ -13,12 +13,14 @@ from agents.auditor import (
     _EXPERIENCE_HEADING,
     _figure_key,
     _figures,
+    _squash,
     _tokens,
     coverage_report,
     ground_check,
     has_section,
     is_grounded,
     merge_recovered,
+    merge_split_bullets,
     repair_figures,
     scrub_skills,
     source_bullet_blocks,
@@ -354,6 +356,62 @@ def test_metric_split_into_its_own_bullet_is_rejoined():
     assert any("Rejoined" in w for w in warnings), warnings
 
 
+# A long consulting resume stops using glyphs partway through: the last bullet
+# of one job is followed by dozens of unbulleted lines belonging to the jobs
+# after it. Folding those into that bullet produced a block containing another
+# job's header, and merge_split_bullets then swapped real responsibilities for
+# it — losing them and importing the wrong job's text in one move.
+GLYPHLESS_TAIL_RESUME = """
+WORK EXPERIENCE
+Employer - IBM Global Services - Jun'03 - Jun'07
+Client: Merck, NJ, USA
+Responsibilities:
+• Requirement gathering and GAP analysis
+• Vendor Master maintenance
+Employer - IBM Global Services - Jun'03 - Jun'07
+Jan'04- Mar'05
+Client: Ericsson, Stockholm, Sweden
+Sr. Consultant - Production Planning
+Responsibilities:
+Business Process analysis
+Configuration
+"""
+
+
+def test_a_bullet_does_not_swallow_the_next_job():
+    blocks = source_bullet_blocks(GLYPHLESS_TAIL_RESUME)
+    assert blocks == [
+        "Requirement gathering and GAP analysis",
+        "Vendor Master maintenance",
+    ], blocks
+    assert not any("Ericsson" in b for b in blocks)
+
+
+def test_responsibilities_are_not_replaced_by_a_runaway_block():
+    merged = {"work_experience": [{
+        "company_name": "IBM Global Services",
+        "responsibilities": [
+            "Requirement gathering and GAP analysis",
+            "Vendor Master maintenance",
+        ],
+    }]}
+    merged, _ = ground_check(merged, GLYPHLESS_TAIL_RESUME)
+    assert merged["work_experience"][0]["responsibilities"] == [
+        "Requirement gathering and GAP analysis",
+        "Vendor Master maintenance",
+    ]
+
+
+def test_a_rejoin_far_longer_than_its_parts_is_refused():
+    # Even if two responsibilities both trace into one block, replacing them
+    # with a block many times their length is not a rejoin — it is a swap.
+    parts = ["Configuration and release", "Releasing the changes"]
+    long_block = "Configuration and release " + ("padding text here " * 30) + "Releasing the changes"
+    out, merged = merge_split_bullets(parts, [long_block], [_squash(long_block)])
+    assert out == parts
+    assert merged == 0
+
+
 def test_separate_bullets_are_not_fused():
     merged = {"work_experience": [{
         "company_name": "Acme Corporation",
@@ -405,6 +463,114 @@ def test_unmatched_bullet_is_counted_rather_than_silently_dropped():
     # Never guessed onto an unrelated employer.
     assert merged["work_experience"][0]["responsibilities"] == []
     assert merged["work_experience"][1]["responsibilities"] == []
+
+
+# ── Figures borrowed from elsewhere on the resume ───────────────────────────
+
+# This resume genuinely says 40% and 25% — in bullets of their own. A figure
+# stapled onto a DIFFERENT bullet is still invented, and a check against the
+# document as a whole could not see that.
+BORROWED_FIGURE_RESUME = """
+WORK EXPERIENCE
+Acme Corporation                                Jan 2020 - Present
+Delivery Manager
+• Standardized the onboarding checklist across four delivery pods
+• Reduced nightly batch processing time by 40% across all regions
+• Ran the quarterly release calendar with the platform team
+• Cut licence spend by 25% at renewal
+"""
+
+
+def test_impact_clause_borrowing_a_figure_from_elsewhere_is_removed():
+    merged = {"work_experience": [{
+        "company_name": "Acme Corporation",
+        "responsibilities": [
+            "Standardized the onboarding checklist across four delivery pods, "
+            "reducing onboarding time 40%",
+            "Ran the quarterly release calendar with the platform team, "
+            "increasing delivery velocity 25% over three quarters",
+        ],
+    }]}
+    merged, warnings = ground_check(merged, BORROWED_FIGURE_RESUME)
+    resp = merged["work_experience"][0]["responsibilities"]
+
+    assert resp == [
+        "Standardized the onboarding checklist across four delivery pods",
+        "Ran the quarterly release calendar with the platform team",
+    ], resp
+    assert any("invented figures" in w for w in warnings), warnings
+
+
+def test_a_bullets_own_figures_are_kept():
+    merged = {"work_experience": [{
+        "company_name": "Acme Corporation",
+        "responsibilities": [
+            "Reduced nightly batch processing time by 40% across all regions",
+            "Cut licence spend by 25% at renewal",
+        ],
+    }]}
+    merged, warnings = ground_check(merged, BORROWED_FIGURE_RESUME)
+    assert merged["work_experience"][0]["responsibilities"] == [
+        "Reduced nightly batch processing time by 40% across all regions",
+        "Cut licence spend by 25% at renewal",
+    ]
+    assert not any("invented figures" in w for w in warnings), warnings
+
+
+# ── Department ──────────────────────────────────────────────────────────────
+
+def test_department_is_dropped_when_the_resume_never_labels_one():
+    merged = {"work_experience": [{
+        "company_name": "Acme Corporation",
+        "department": "Department of Workforce Development",
+        "responsibilities": [],
+    }]}
+    merged, warnings = ground_check(merged, RESUME_TEXT)
+    assert merged["work_experience"][0]["department"] is None
+    assert any("Removed department" in w for w in warnings), warnings
+
+
+def test_a_labelled_department_is_kept():
+    resume = RESUME_TEXT.replace(
+        "Client: Diligent Insurance",
+        "Client: Diligent Insurance\nDepartment: Claims Technology",
+    )
+    merged = {"work_experience": [{
+        "company_name": "Acme Corporation",
+        "department": "Claims Technology",
+        "responsibilities": [],
+    }]}
+    merged, _ = ground_check(merged, resume)
+    assert merged["work_experience"][0]["department"] == "Claims Technology"
+
+
+# ── Skills ──────────────────────────────────────────────────────────────────
+
+def test_packed_skill_lines_are_taken_apart_and_prose_dropped():
+    resume = RESUME_TEXT + """
+TECHNICAL SKILLS
+App Servers: WebSphere, WebLogic, Tomcat, JBoss
+Work Authorization - US Permanent Resident (Green Card). No sponsorship required.
+"""
+    skills = {"other_skills": [
+        "App Servers: WebSphere, WebLogic, Tomcat, JBoss",
+        "Work Authorization - US Permanent Resident (Green Card). No sponsorship required.",
+    ]}
+    scrub_skills(skills, source_terms(resume))
+    assert skills["other_skills"] == ["WebSphere", "WebLogic", "Tomcat", "JBoss"]
+    # The unions are re-derived so they never disagree with the buckets.
+    assert skills["all_skills_raw"] == ["WebSphere", "WebLogic", "Tomcat", "JBoss"]
+
+
+def test_recovered_skill_line_is_split_rather_than_appended_whole():
+    merged = {"skills": {"other_skills": [], "all_skills_raw": []}}
+    added = merge_recovered(merged, {"skills": [
+        "Containerization: Docker, Kubernetes, Helm · IaC: Terraform, CloudFormation",
+    ]})
+    assert added["skills"] == 5
+    assert merged["skills"]["other_skills"] == [
+        "Docker", "Kubernetes", "Helm", "Terraform", "CloudFormation",
+    ]
 
 
 def test_recovered_summary_line_is_appended_not_dropped():

@@ -101,3 +101,23 @@ def test_verbatim_categories_are_not_folded_into_the_unions():
 
     assert skills["all_skills_raw"] == ["Python"]
     assert skills["categories"] == [{"name": "ETL Tool", "skills": ["Informatica"]}]
+
+
+def test_categories_carry_the_unions_when_the_taxonomy_pass_failed():
+    """The two passes fail independently.
+
+    When the taxonomy pass is the one that dies, every bucket is empty and the
+    resume's own labelled categories are all that came back. Empty unions there
+    read as "this candidate lists no skills" — the fallback is what keeps a
+    real skills section from vanishing on a partial run.
+    """
+    skills = derive_union_fields({
+        "programming_languages": [],
+        "categories": [
+            {"name": "Skill sets in SAP", "skills": ["Procure to Pay (PTP)", "QM"]},
+            {"name": "Supporting tools", "skills": ["Solution Manager", "QM"]},
+        ],
+    })
+
+    assert skills["technical_skills"] == ["Procure to Pay (PTP)", "QM", "Solution Manager"]
+    assert skills["all_skills_raw"] == ["Procure to Pay (PTP)", "QM", "Solution Manager"]

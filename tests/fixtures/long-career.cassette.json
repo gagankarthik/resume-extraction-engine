@@ -1,0 +1,370 @@
+{
+ "meta": {
+  "resume_file": "long-career.txt",
+  "model": "gpt-4.1-mini",
+  "extraction_method": "txt",
+  "pages": 1
+ },
+ "calls": {
+  "a6587e41eb825f54": [
+   {
+    "hint": "=== RESUME ===",
+    "text": "{\n  \"education\": [\n    {\n      \"institution_name\": \"Rani Dugravati University\",\n      \"degree\": \"Masters in Chemistry\",\n      \"degree_type\": \"MS\",\n      \"field_of_study\": \"Chemistry\",\n      \"major\": null,\n      \"minor\": null,\n      \"start_date\": null,\n      \"end_date\": \"1989\",\n      \"is_current\": false,\n      \"gpa\": null,\n      \"percentage\": null,\n      \"grade\": null,\n      \"honors\": [],\n      \"relevant_coursework\": [],\n      \"thesis_title\": null,\n      \"dissertation\": null,\n      \"location\": \"Jabalpur MP\",\n      \"activities\": [],\n      \"description\": null\n    },\n    {\n      \"institution_name\": \"IGNOU\",\n      \"degree\": \"MBA\",\n      \"degree_type\": \"MBA\",\n      \"field_of_study\": null,\n      \"major\": null,\n      \"minor\": null,\n      \"start_date\": null,\n      \"end_date\": \"1999\",\n      \"is_current\": false,\n      \"gpa\": null,\n      \"percentage\": null,\n      \"grade\": null,\n      \"honors\": [],\n      \"relevant_coursework\": [],\n      \"thesis_title\": null,\n      \"dissertation\": null,\n      \"location\": \"Delhi\",\n      \"activities\": [],\n      \"description\": null\n    }\n  ]\n}",
+    "input_tokens": 570,
+    "output_tokens": 296,
+    "truncated": false
+   }
+  ],
+  "718e5810b1e46940": [
+   {
+    "hint": "=== RESUME ===",
+    "text": "{\n  \"personal_information\": {\n    \"full_name\": \"Anil K Verma\",\n    \"first_name\": \"Anil\",\n    \"last_name\": \"Verma\",\n    \"email\": [\n      \"anil.verma@example.com\"\n    ],\n    \"phone\": [\n      \"555 0100 7788\"\n    ],\n    \"address\": {\n      \"full_address\": \"Lewis Center, OH\",\n      \"street\": null,\n      \"city\": \"Lewis Center\",\n      \"state\": \"OH\",\n      \"country\": null,\n      \"zip_code\": null\n    },\n    \"linkedin_url\": null,\n    \"github_url\": null,\n    \"portfolio_url\": null,\n    \"twitter_url\": null,\n    \"other_urls\": [],\n    \"date_of_birth\": null,\n    \"nationality\": null,\n    \"gender\": null,\n    \"marital_status\": null\n  },\n  \"professional_summary\": \"I am a SAP Consultant with more than 3 decades of total experience, with 24 (since 2002) years of SAP consulting experience in Supply Chain area. Before SAP Consulting, I worked for 11 (1990 - 2001) years in manufacturing / shop floor, with last assignment as a Plant General Manager for a manufacturing unit, that helps me understand the business process to transform the business into SAP.\\n\\nApart from configuration, writing FSPECs, testing, client meeting for UAT sign off, I have extensive experience with conducting workshops, training, developing BPP documents, defect management, project management and coordination across teams for meeting the deliverable timelines.\",\n  \"objective\": null\n}",
+    "input_tokens": 7211,
+    "output_tokens": 337,
+    "truncated": false
+   }
+  ],
+  "1a331b3caae8df20": [
+   {
+    "hint": "=== RESUME ===",
+    "text": "{\n  \"professional_summary\": null,\n  \"objective\": null,\n  \"projects\": [],\n  \"references\": [],\n  \"patents\": [],\n  \"conferences_and_talks\": [],\n  \"courses\": [],\n  \"training\": [\n    {\n      \"name\": \"Training/ Development /Self employed\",\n      \"provider\": null,\n      \"date\": \"Nov '01 - Sep' 02\",\n      \"duration\": null,\n      \"description\": \"Responsibilities:\\n• Analysis of Business Process and suggesting the client for best Manufacturing Practices\\n• Analysis of ERP requirements\"\n    }\n  ],\n  \"extracurricular_activities\": [],\n  \"raw_sections\": {\n    \"section_names_found\": [\n      \"SAP Projects\",\n      \"SAP Project Manager\",\n      \"Training/ Development /Self employed\",\n      \"Education\"\n    ],\n    \"unclassified_content\": \"The resume contains extensive SAP project experience and detailed job responsibilities but no explicit supplemental sections such as professional summary, objective, projects, references, patents, conferences and talks, courses, or extracurricular activities.\"\n  }\n}",
+    "input_tokens": 6624,
+    "output_tokens": 219,
+    "truncated": false
+   }
+  ],
+  "d8913e9566c70f71": [
+   {
+    "hint": "=== RESUME ===",
+    "text": "{\n  \"categories\": [\n    {\n      \"name\": \"Skill sets in SAP\",\n      \"skills\": [\n        \"Procure to Pay (PTP)\",\n        \"Inventory Management\",\n        \"Plan to produce (PTM PP, PP-PI)\",\n        \"FI - Invoice Processing (Accounts Payable PTP and Receivable OTC)\",\n        \"QM\",\n        \"Central Functions\",\n        \"Data Conversion and Interfaces\",\n        \"Master Data Management/Data Conversion\",\n        \"Data Services\",\n        \"BackOffice\",\n        \"Cransoft\",\n        \"Informatica\",\n        \"MDM tools like Siperian\",\n        \"NIA\",\n        \"Customized web-based tool\",\n        \"RICEF Objects\",\n        \"SAP ME/MII\",\n        \"SAP - SNC\",\n        \"SAP - APO using HANA\",\n        \"ETL\",\n        \"web Methods\",\n        \"TIBCO\",\n        \"SAP XI/PI\",\n        \"EDI\"\n      ]\n    },\n    {\n      \"name\": \"Supporting tools\",\n      \"skills\": [\n        \"Solution Manager\",\n        \"HPQC Test Manager\"\n      ]\n    },\n    {\n      \"name\": \"SAP Training and Courses\",\n      \"skills\": [\n        \"SAP S/4 HANA Simple Logistics\",\n        \"SAP PP\",\n        \"SAP MM\",\n        \"SAP PM\",\n        \"SAP APO (DP/SNP)\",\n        \"SAP FI /CO\"\n      ]\n    }\n  ],\n  \"uncategorized\": []\n}",
+    "input_tokens": 7005,
+    "output_tokens": 300,
+    "truncated": false
+   }
+  ],
+  "67cfd9a0e781c7b8": [
+   {
+    "hint": "=== RESUME TEXT ===",
+    "text": "{\n  \"jobs\": [\n    {\n      \"company\": \"An Aircraft part manufacturer\",\n      \"title\": \"SAP Project Manager\",\n      \"start_date\": \"Since June 2025\",\n      \"end_date\": \"Present\",\n      \"location\": null,\n      \"anchor_line\": \"Since June 2025 -\",\n      \"has_sub_projects\": false\n    },\n    {\n      \"company\": \"Boeing\",\n      \"title\": \"SAP Solution Architect / Project Management\",\n      \"start_date\": \"Dec 2023\",\n      \"end_date\": \"May 2025\",\n      \"location\": null,\n      \"anchor_line\": \"Dec 2023 - May 2025\",\n      \"has_sub_projects\": false\n    },\n    {\n      \"company\": \"DRIV (Formerly known as Federal Mogul) / Tenneco (An Automobile part company)\",\n      \"title\": \"Architect for Supply Chain for MM / PP / Planning and integration\",\n      \"start_date\": \"Sep 2023\",\n      \"end_date\": \"Dec 2023\",\n      \"location\": null,\n      \"anchor_line\": \"Sep 2023 - Dec 2023\",\n      \"has_sub_projects\": false\n    },\n    {\n      \"company\": \"Cardinal Health\",\n      \"title\": \"SAP MM Consultant for FI integration\",\n      \"start_date\": \"Dec 2022\",\n      \"end_date\": \"Aug 2023\",\n      \"location\": null,\n      \"anchor_line\": \"Dec 2022 - Aug 2023\",\n      \"has_sub_projects\": false\n    },\n    {\n      \"company\": \"Baltimore Aircoil\",\n      \"title\": \"SAP PP Lead Consultant S4 HANA\",\n      \"start_date\": \"March 2022\",\n      \"end_date\": \"Nov 2022\",\n      \"location\": null,\n      \"anchor_line\": \"March 2022 - Nov 2022\",\n      \"has_sub_projects\": false\n    },\n    {\n      \"company\": \"Southwire\",\n      \"title\": \"SAP MM / PP Consultant\",\n      \"start_date\": \"Oct 2021\",\n      \"end_date\": \"March 2022\",\n      \"location\": null,\n      \"anchor_line\": \"Oct 2021 - March 2022\",\n      \"has_sub_projects\": false\n    },\n    {\n      \"company\": \"Cardinal Health\",\n      \"title\": \"Sr SAP Functional Lead\",\n      \"start_date\": \"July 2019\",\n      \"end_date\": \"Sep 2021\",\n      \"location\": null,\n      \"anchor_line\": \"July 2019 - Sep 2021\",\n      \"has_sub_projects\": false\n    },\n    {\n      \"company\": \"Weir Minerals\",\n      \"title\": \"Sr SAP Consultant MM/PP/QM\",\n      \"start_date\": \"Apr 2019\",\n      \"end_date\": \"July 2019\",\n      \"location\": null,\n      \"anchor_line\": \"Apr 2019 - July 2019\",\n      \"has_sub_projects\": false\n    },\n    {\n      \"company\": \"Cardinal Health\",\n      \"title\": \"SAP MM Lead Consultant\",\n      \"start_date\": \"Sep 2017\",\n      \"end_date\": \"March 2019\",\n      \"location\": null,\n      \"anchor_line\": \"Sep 2017 - March 2019\",\n      \"has_sub_projects\": false\n    },\n    {\n      \"company\": \"S C Johnson\",\n      \"title\": \"SAP Consultant PP /QM\",\n      \"start_date\": \"June 2017\",\n      \"end_date\": \"Sep 2017\",\n      \"location\": null,\n      \"anchor_line\": \"June 2017 - Sep 2017\",\n      \"has_sub_projects\": false\n    },\n    {\n      \"company\": \"Cardinal Health\",\n      \"title\": \"SAP P2P Consultant\",\n      \"start_date\": \"Aug 2016\",\n      \"end_date\": \"May 2017\",\n      \"location\": null,\n      \"anchor_line\": \"Aug 2016 - May 2017\",\n      \"has_sub_projects\": false\n    },\n    {\n      \"company\": \"TTX Rail Car\",\n      \"title\": \"SAP MRP Consultant\",\n      \"start_date\": \"Nov 2015\",\n      \"end_date\": \"Aug 2016\",\n      \"location\": null,\n      \"anchor_line\": \"Nov 2015 - Aug 2016\",\n      \"has_sub_projects\": false\n    },\n    {\n      \"company\": \"Crown Equipment\",\n      \"title\": \"SAP PP Consultant\",\n      \"start_date\": \"Jun 2015\",\n      \"end_date\": \"Nov 2015\",\n      \"location\": null,\n      \"anchor_line\": \"Jun 2015 - Nov 2015\",\n      \"has_sub_projects\": false\n    },\n    {\n      \"company\": \"Jacklinks, MN\",\n      \"title\": \"Lead Supply Chain Consultant for SAP PP /MM/QM/WM\",\n      \"start_date\": \"Aug 2013\",\n      \"end_date\": \"Jun 2015\",\n      \"location\": \"MN\",\n      \"anchor_line\": \"Aug 2013 -Jun 2015.\",\n      \"has_sub_projects\": false\n    },\n    {\n      \"company\": \"Sanofi Aventis\",\n      \"title\": \"Solution Architect for SAP Process Data Warehouse for MM/ PP /, QM\",\n      \"start_date\": \"Nov 2012\",\n      \"end_date\": \"Jun 2013\",\n      \"location\": null,\n      \"anchor_line\": \"Nov 2012 - Jun 2013\",\n      \"has_sub_projects\": false\n    },\n    {\n      \"company\": \"Global Specialty Metals, Marietta, OH\",\n      \"title\": \"SAP PP/MM/QM\",\n      \"start_date\": \"Sep 2012\",\n      \"end_date\": \"Nov 2012\",\n      \"location\": \"Marietta, OH\",\n      \"anchor_line\": \"Sep 2012 - Nov 2012\",\n      \"has_sub_projects\": false\n    },\n    {\n      \"company\": \"Mylan Labs\",\n      \"title\": \"SAP PP QM\",\n      \"start_date\": \"May 2012\",\n      \"end_date\": \"Sep 2012\",\n      \"location\": null,\n      \"anchor_line\": \"May 2012 - Sep 2012\",\n      \"has_sub_projects\": false\n    },\n    {\n      \"company\": \"Owens Corning, Toledo, Ohio\",\n      \"title\": \"PP Consultant\",\n      \"start_date\": \"Feb 2012\",\n      \"end_date\": \"May 2012\",\n      \"location\": \"Toledo, Ohio\",\n      \"anchor_line\": \"Feb 2012 - May 2012\",\n      \"has_sub_projects\": false\n    },\n    {\n      \"company\": \"Cardinal Health, Dublin, Ohio\",\n      \"title\": \"SAP Consultant MM (PTP)\",\n      \"start_date\": \"Nov - 2010\",\n      \"end_date\": \"Feb 2012\",\n      \"location\": \"Dublin, Ohio\",\n      \"anchor_line\": \"Nov - 2010 - Feb 2012\",\n      \"has_sub_projects\": false\n    },\n    {\n      \"company\": \"Johnson and Johnson at NJ, USA\",\n      \"title\": \"SAP Integration Lead MM/PP/Interfaces/Integration/MDM\",\n      \"start_date\": \"Feb'09\",\n      \"end_date\": \"Nov' 10\",\n      \"location\": \"NJ, USA\",\n      \"anchor_line\": \"Feb'09 - Nov' 10.\",\n      \"has_sub_projects\": false\n    },\n    {\n      \"company\": \"Limited Brands, (Victoria's Secret / Bath and Body Works)\",\n      \"title\": \"Application Consultant, Master Data\",\n      \"start_date\": \"Jun'07\",\n      \"end_date\": \"Jan' 09\",\n      \"location\": null,\n      \"anchor_line\": \"Jun'07 - Jan' 09\",\n      \"has_sub_projects\": false\n    },\n    {\n      \"company\": \"IBM Global Services\",\n      \"title\": \"Sr. Consultant - Matériel Master / SAP PP\",\n      \"start_date\": \"Apr'06\",\n      \"end_date\": \"Jun' 07\",\n      \"location\": \"NJ, USA\",\n      \"anchor_line\": \"Apr'06 - Jun' 07\",\n      \"has_sub_projects\": false\n    },\n    {\n      \"company\": \"IBM Global Services\",\n      \"title\": \"Sr. Consultant SAP Material Management\",\n      \"start_date\": \"Apr'05\",\n      \"end_date\": \"Mar'06\",\n      \"location\": \"NJ, USA\",\n      \"anchor_line\": \"Apr'05 - Mar'06\",\n      \"has_sub_projects\": false\n    },\n    {\n      \"company\": \"IBM Global Services\",\n      \"title\": \"Sr. Consultant - Production Planning, Materials Management, Variant Configuration\",\n      \"start_date\": \"Jan'04\",\n      \"end_date\": \"Mar'05\",\n      \"location\": \"Stockholm, Sweden\",\n      \"anchor_line\": \"Jan'04- Mar'05\",\n      \"has_sub_projects\": false\n    },\n    {\n      \"company\": \"IBM Global Services\",\n      \"title\": \"Sr. Consultant for Logistics (PP, MM, SD, QM), PS and VC\",\n      \"start_date\": \"Aug'03\",\n      \"end_date\": \"Dec'03\",\n      \"location\": \"Sweden\",\n      \"anchor_line\": \"Client: Tetra Pak, Sweden\",\n      \"has_sub_projects\": false\n    },\n    {\n      \"company\": \"Siemens Information Systems Ltd.\",\n      \"title\": \"SAP PP Consultant\",\n      \"start_date\": \"Apr' 03\",\n      \"end_date\": \"Jun' 03\",\n      \"location\": \"India\",\n      \"anchor_line\": \"Siemens Information Systems Ltd. Apr' 03 - Jun' 03\",\n      \"has_sub_projects\": false\n    },\n    {\n      \"company\": \"Torrent Pharma Ltd.\",\n      \"title\": \"SAP PP Consultant\",\n      \"start_date\": \"Apr 03\",\n      \"end_date\": \"Jun 03\",\n      \"location\": \"India\",\n      \"anchor_line\": \"Apr 03 - Jun 03\",\n      \"has_sub_projects\": false\n    },\n    {\n      \"company\": \"CVS IT Services\",\n      \"title\": \"SAP Consultant PP and VC\",\n      \"start_date\": \"Oct' 02\",\n      \"end_date\": \"Apr' 03\",\n      \"location\": \"India\",\n      \"anchor_line\": \"CVS IT Services Oct' 02 - Apr' 03\",\n      \"has_sub_projects\": false\n    },\n    {\n      \"company\": \"Ispat Industries Ltd.\",\n      \"title\": \"SAP Consultant PP and VC\",\n      \"start_date\": \"Oct 02\",\n      \"end_date\": \"Apr 03\",\n      \"location\": \"India\",\n      \"anchor_line\": \"Oct 02 - Apr 03\",\n      \"has_sub_projects\": false\n    },\n    {\n      \"company\": \"Training/ Development /Self employed\",\n      \"title\": null,\n      \"start_date\": \"Nov '01\",\n      \"end_date\": \"Sep' 02\",\n      \"location\": null,\n      \"anchor_line\": \"Nov '01 - Sep' 02\",\n      \"has_sub_projects\": false\n    },\n    {\n      \"company\": \"C.J.Gelatin Products Ltd.\",\n      \"title\": \"General Manager for Production and Quality Control\",\n      \"start_date\": \"Feb' 01\",\n      \"end_date\": \"Oct' 01\",\n      \"location\": \"Bhopal, India\",\n      \"anchor_line\": \"C.J.Gelatin Products Ltd. | Manufacturing Co. Pharma and Food Grade Chemical | General Manager for Production and Quality Control | Bhopal, India | Feb' 01 - Oct' 01\",\n      \"has_sub_projects\": false\n    },\n    {\n      \"company\": \"Rama Industries Ltd.\",\n      \"title\": \"Head of Technical Services and Dy. Manager.\",\n      \"start_date\": \"Feb' 99\",\n      \"end_date\": \"Feb' 01\",\n      \"location\": \"Patiala, India\",\n      \"anchor_line\": \"Rama Industries Ltd. | Manufacturing Co. Pharma and Food Grade Chemical | Head of Technical Services and Dy. Manager. | Patiala, India | Feb' 99 - Feb' 01\",\n      \"has_sub_projects\": false\n    },\n    {\n      \"company\": \"Shaw Wallace Gelatines Ltd.\",\n      \"title\": \"Sr. Executive Production and Process Control\",\n      \"start_date\": \"Feb' 90\",\n      \"end_date\": \"Feb' 99\",\n      \"location\": \"Jabalpur, India\",\n      \"anchor_line\": \"Shaw Wallace Gelatines Ltd. | Manufacturing Co. Food, Pharma Grade Chemical and Beverage | Sr. Executive Production and Process Control | Jabalpur, India | Feb' 90 - Feb' 99\",\n      \"has_sub_projects\": false\n    }\n  ]\n}",
+    "input_tokens": 7163,
+    "output_tokens": 2755,
+    "truncated": false
+   }
+  ],
+  "abda5f4a0c057df1": [
+   {
+    "hint": "Extract work experience for: DRIV (Formerly known as Federal Mogul) / Tenneco (An Automobi",
+    "text": "{\n  \"company_name\": \"DRIV (Formerly known as Federal Mogul) / Tenneco (An Automobile part company)\",\n  \"job_title\": \"Architect for Supply Chain for MM / PP / Planning and integration\",\n  \"start_date\": \"Sep 2023\",\n  \"end_date\": \"Dec 2023\",\n  \"is_current\": false,\n  \"location\": null,\n  \"department\": null,\n  \"employment_type\": null,\n  \"duration\": null,\n  \"responsibilities\": [\n    \"Architect for Supply Chain for MM / PP / Planning and integration with complex WM scenario for their greenfield project.\",\n    \"Responsible for the techno functional architecture / coordination and deliverable\"\n  ],\n  \"achievements\": [],\n  \"technologies_used\": [],\n  \"description\": null,\n  \"projects\": []\n}",
+    "input_tokens": 2371,
+    "output_tokens": 172,
+    "truncated": false
+   }
+  ],
+  "04c8021556757c31": [
+   {
+    "hint": "Extract work experience for: Southwire | SAP MM / PP Consultant",
+    "text": "{\n  \"company_name\": \"Southwire\",\n  \"job_title\": \"SAP MM / PP Consultant\",\n  \"start_date\": \"Oct 2021\",\n  \"end_date\": \"March 2022\",\n  \"is_current\": false,\n  \"location\": null,\n  \"department\": null,\n  \"employment_type\": null,\n  \"duration\": null,\n  \"responsibilities\": [\n    \"Bringing new acquired plants to its landscape of SAP of the parent company.\",\n    \"Responsible for designing / support for rolling SAP solution for PP and MM modules using PP / VC and integration with CPQ\",\n    \"Supported 2 Go Lives in FL and CA\"\n  ],\n  \"achievements\": [],\n  \"technologies_used\": [],\n  \"description\": null,\n  \"projects\": []\n}",
+    "input_tokens": 2329,
+    "output_tokens": 164,
+    "truncated": false
+   }
+  ],
+  "ea23db226933f3a1": [
+   {
+    "hint": "Extract work experience for: Baltimore Aircoil | SAP PP Lead Consultant S4 HANA",
+    "text": "{\n  \"company_name\": \"Baltimore Aircoil\",\n  \"job_title\": \"SAP PP Lead Consultant S4 HANA\",\n  \"start_date\": \"March 2022\",\n  \"end_date\": \"Nov 2022\",\n  \"is_current\": false,\n  \"location\": null,\n  \"department\": null,\n  \"employment_type\": null,\n  \"duration\": null,\n  \"responsibilities\": [\n    \"Designed PP solutions, including Configuration, RICEF design ownership and integration with VC & PPDS.\",\n    \"SAP PP (VC) Consultant S/4 HANA - Designed the solution for Shop Floor Production including configuration and enhancement design, integration with VC, PPDS\"\n  ],\n  \"achievements\": [],\n  \"technologies_used\": [],\n  \"description\": null,\n  \"projects\": []\n}",
+    "input_tokens": 2341,
+    "output_tokens": 169,
+    "truncated": false
+   }
+  ],
+  "13680e565ef0aac5": [
+   {
+    "hint": "Extract work experience for: Cardinal Health | SAP MM Consultant for FI integration",
+    "text": "{\n  \"company_name\": \"Cardinal Health\",\n  \"job_title\": \"SAP MM Consultant for FI integration\",\n  \"start_date\": \"Dec 2022\",\n  \"end_date\": \"Aug 2023\",\n  \"is_current\": false,\n  \"location\": null,\n  \"department\": null,\n  \"employment_type\": null,\n  \"duration\": null,\n  \"responsibilities\": [\n    \"Coordinating with other partner system integrators for design discussion/ blueprint.\",\n    \"Configuration and writing FSPEC\"\n  ],\n  \"achievements\": [],\n  \"technologies_used\": [],\n  \"description\": null,\n  \"projects\": []\n}",
+    "input_tokens": 2304,
+    "output_tokens": 136,
+    "truncated": false
+   }
+  ],
+  "1fb7818b3a2cc1a4": [
+   {
+    "hint": "Extract work experience for: Cardinal Health | Sr SAP Functional Lead",
+    "text": "{\n  \"company_name\": \"Cardinal Health\",\n  \"job_title\": \"Sr SAP Functional Lead\",\n  \"start_date\": \"July 2019\",\n  \"end_date\": \"Sep 2021\",\n  \"is_current\": false,\n  \"location\": null,\n  \"department\": null,\n  \"employment_type\": null,\n  \"duration\": null,\n  \"responsibilities\": [\n    \"Responsible for designing, writing FSPEC, testing and UAT approval of GPO reporting in a very complex landscape in SAP functional areas PTP /OTC /FICO IR / AR with data source being multiple legacy systems, SAP ECC, Order Express, HANA suit, Teradata / ETL\"\n  ],\n  \"achievements\": [],\n  \"technologies_used\": [\n    \"SAP ECC\",\n    \"Order Express\",\n    \"HANA suit\",\n    \"Teradata\",\n    \"ETL\"\n  ],\n  \"description\": null,\n  \"projects\": []\n}",
+    "input_tokens": 2340,
+    "output_tokens": 200,
+    "truncated": false
+   }
+  ],
+  "221167737aa9f7e0": [
+   {
+    "hint": "=== SKILLS ===",
+    "text": "{\n  \"skills\": {\n    \"soft_skills\": [],\n    \"programming_languages\": [],\n    \"frameworks_and_libraries\": [],\n    \"databases\": [],\n    \"cloud_platforms\": [],\n    \"tools_and_platforms\": [\n      \"Cransoft\",\n      \"Informatica\",\n      \"MDM tools like Siperian\",\n      \"NIA\",\n      \"Customized web-based tool\",\n      \"web Methods\",\n      \"TIBCO\",\n      \"Solution Manager\",\n      \"HPQC Test Manager\"\n    ],\n    \"operating_systems\": [],\n    \"methodologies\": [],\n    \"domain_skills\": [\n      \"Procure to Pay (PTP)\",\n      \"Inventory Management\",\n      \"Plan to produce (PTM PP, PP-PI)\",\n      \"FI - Invoice Processing (Accounts Payable PTP and Receivable OTC)\",\n      \"QM\",\n      \"Central Functions\",\n      \"Data Conversion and Interfaces\",\n      \"Master Data Management/Data Conversion\",\n      \"Data Services\",\n      \"BackOffice\",\n      \"RICEF Objects\",\n      \"SAP ME/MII\",\n      \"SAP - SNC\",\n      \"SAP - APO using HANA\",\n      \"ETL\",\n      \"SAP XI/PI\",\n      \"EDI\",\n      \"SAP S/4 HANA Simple Logistics\",\n      \"SAP PP\",\n      \"SAP MM\",\n      \"SAP PM\",\n      \"SAP APO (DP/SNP)\",\n      \"SAP FI /CO\"\n    ],\n    \"design_skills\": [],\n    \"other_skills\": []\n  }\n}",
+    "input_tokens": 798,
+    "output_tokens": 315,
+    "truncated": false
+   }
+  ],
+  "56d3770d39f8e9ea": [
+   {
+    "hint": "Extract work experience for: S C Johnson | SAP Consultant PP /QM",
+    "text": "{\n  \"company_name\": \"S C Johnson\",\n  \"job_title\": \"SAP Consultant PP /QM\",\n  \"start_date\": \"June 2017\",\n  \"end_date\": \"Sep 2017\",\n  \"is_current\": false,\n  \"location\": null,\n  \"department\": null,\n  \"employment_type\": null,\n  \"duration\": null,\n  \"responsibilities\": [\n    \"Designed SAP Solution for PP and QM for newly acquired business in Europe.\",\n    \"Designed conversion of Master Data (Material Master, BOM, Recipe), configuration of Order Management, MRP, Shop Floor Control, Functional design for RICEF, QM Set up for raw material and finished goods, Master Inspection Plan, Inspection Lot and integration with Sales / Procurement / WM,\",\n    \"New acquisition and part of design of Global Template.\"\n  ],\n  \"achievements\": [],\n  \"technologies_used\": [],\n  \"description\": null,\n  \"projects\": []\n}",
+    "input_tokens": 2363,
+    "output_tokens": 197,
+    "truncated": false
+   }
+  ],
+  "1f7ae94321a5ed0a": [
+   {
+    "hint": "Extract work experience for: Cardinal Health | SAP MM Lead Consultant",
+    "text": "{\n  \"company_name\": \"Cardinal Health\",\n  \"job_title\": \"SAP MM Lead Consultant\",\n  \"start_date\": \"Sep 2017\",\n  \"end_date\": \"March 2019\",\n  \"is_current\": false,\n  \"location\": null,\n  \"department\": null,\n  \"employment_type\": null,\n  \"duration\": null,\n  \"responsibilities\": [\n    \"Area of work SAP MM - FI Integration - Integration Lead for Newly Acquired Plants. This includes bringing the business of the acquired company into the landscape of Cardinal Health on SAP Systems\",\n    \"Designed AP Invoice Interface and Recon reporting for 17 acquired plants of Medtronic into Cardinal SAP (S/4 and ECC systems) for payment to be processed in SAP System\"\n  ],\n  \"achievements\": [],\n  \"technologies_used\": [],\n  \"description\": null,\n  \"projects\": []\n}",
+    "input_tokens": 2351,
+    "output_tokens": 185,
+    "truncated": false
+   }
+  ],
+  "1f411a132d84e47a": [
+   {
+    "hint": "Extract work experience for: An Aircraft part manufacturer | SAP Project Manager",
+    "text": "{\n  \"company_name\": \"An Aircraft part manufacturer\",\n  \"job_title\": \"SAP Project Manager\",\n  \"start_date\": \"Since June 2025\",\n  \"end_date\": \"Till Date\",\n  \"is_current\": true,\n  \"location\": null,\n  \"department\": null,\n  \"employment_type\": null,\n  \"duration\": null,\n  \"responsibilities\": [\n    \"SAP Project Management / Solution Architect for S/4 HANA implementation, responsible for Design review / approval, delivery, testing, UAT approval, escalation, Change review deployment and coordination among teams and stakeholders for deliverables.\"\n  ],\n  \"achievements\": [],\n  \"technologies_used\": [\n    \"S/4 HANA\"\n  ],\n  \"description\": null,\n  \"projects\": []\n}",
+    "input_tokens": 2320,
+    "output_tokens": 164,
+    "truncated": false
+   }
+  ],
+  "f0c4ca03208c8322": [
+   {
+    "hint": "Extract work experience for: Cardinal Health | SAP P2P Consultant",
+    "text": "{\n  \"company_name\": \"Cardinal Health\",\n  \"job_title\": \"SAP P2P Consultant\",\n  \"start_date\": \"Aug 2016\",\n  \"end_date\": \"May 2017\",\n  \"is_current\": false,\n  \"location\": null,\n  \"department\": null,\n  \"employment_type\": null,\n  \"duration\": null,\n  \"responsibilities\": [\n    \"Procurement, Goods Movement, Inventory and AP Unmatched and Matched Invoices\",\n    \"Data conversion - Design and issue handling for conversion of Data from Legacy systems including CMS and JDE, Report generation and sign off (Coordination with different stake holders for design, development and sign off).\",\n    \"EDI and other Interfaces for Invoice\",\n    \"Report design for BI and A\",\n    \"Part of Brokerage and BackOffice Go Live and fixing of issues - Hyper Care\"\n  ],\n  \"achievements\": [],\n  \"technologies_used\": [],\n  \"description\": null,\n  \"projects\": []\n}",
+    "input_tokens": 2372,
+    "output_tokens": 208,
+    "truncated": false
+   }
+  ],
+  "59e166c28fa6deb0": [
+   {
+    "hint": "Extract work experience for: Weir Minerals | Sr SAP Consultant MM/PP/QM",
+    "text": "{\n  \"company_name\": \"Weir Minerals\",\n  \"job_title\": \"Sr SAP Consultant MM/PP/QM\",\n  \"start_date\": \"Apr 2019\",\n  \"end_date\": \"July 2019\",\n  \"is_current\": false,\n  \"location\": null,\n  \"department\": null,\n  \"employment_type\": null,\n  \"duration\": null,\n  \"responsibilities\": [\n    \"Designing SAP MM / PP solution across plants in USA and integrating SAP with tools for Production Scheduling and Shop Floor Control / QM design / Integration QM with MES and integration with Sales / Planning / MRP Procurement /WM\",\n    \"Worked for Go live for one plant (Global Template)\"\n  ],\n  \"achievements\": [],\n  \"technologies_used\": [],\n  \"description\": null,\n  \"projects\": []\n}",
+    "input_tokens": 2344,
+    "output_tokens": 172,
+    "truncated": false
+   }
+  ],
+  "8101f1231920aa4a": [
+   {
+    "hint": "Extract work experience for: TTX Rail Car | SAP MRP Consultant",
+    "text": "{\n  \"company_name\": \"TTX Rail Car\",\n  \"job_title\": \"SAP MRP Consultant\",\n  \"start_date\": \"Nov 2015\",\n  \"end_date\": \"Aug 2016\",\n  \"is_current\": false,\n  \"location\": null,\n  \"department\": null,\n  \"employment_type\": null,\n  \"duration\": null,\n  \"responsibilities\": [\n    \"Responsible for Business Requirement, Blueprint, Configuration, Functional Design and Testing MRP Rollout\",\n    \"Designed MRP to optimize inventory, enable Internal STO and External PO, for Field Operation and rolled out in 20 Plants\",\n    \"Set up Jobs for Forecast and MRP\",\n    \"Knowledge Transfer to Client\"\n  ],\n  \"achievements\": [],\n  \"technologies_used\": [],\n  \"description\": null,\n  \"projects\": []\n}",
+    "input_tokens": 2341,
+    "output_tokens": 175,
+    "truncated": false
+   }
+  ],
+  "016114a6e8d913e9": [
+   {
+    "hint": "Extract work experience for: Boeing | SAP Solution Architect / Project Management",
+    "text": "{\n  \"company_name\": \"Boeing\",\n  \"job_title\": \"SAP Solution Architect / Project Management\",\n  \"start_date\": \"Dec 2023\",\n  \"end_date\": \"May 2025\",\n  \"is_current\": false,\n  \"location\": null,\n  \"department\": null,\n  \"employment_type\": null,\n  \"duration\": null,\n  \"responsibilities\": [\n    \"Solution design for Global Services projects in a complex landscape including SAP and multiple interfaces with multiple other SAP and non-SAP systems including for Planning and Supply Chain\",\n    \"SAP Functionality included PTM, PTP, WM, OTC, FTP (SAP APO/ SPM), FICO / PM / MRO\",\n    \"Project Management / Leading the team of Consultants, Boeing IT and Business to ensure accurate and acceptable design\",\n    \"Estimation, Budgeting and budget approval for estimates\",\n    \"Techno Functional Architecture\",\n    \"Coordination\",\n    \"Project deliverables\",\n    \"Regular and periodic reporting for PMO and Clients\"\n  ],\n  \"achievements\": [],\n  \"technologies_used\": [\n    \"SAP\",\n    \"PTM\",\n    \"PTP\",\n    \"WM\",\n    \"OTC\",\n    \"FTP\",\n    \"SAP APO\",\n    \"SPM\",\n    \"FICO\",\n    \"PM\",\n    \"MRO\"\n  ],\n  \"description\": null,\n  \"projects\": []\n}",
+    "input_tokens": 2400,
+    "output_tokens": 294,
+    "truncated": false
+   }
+  ],
+  "b27a312fca657d3a": [
+   {
+    "hint": "Extract work experience for: Owens Corning, Toledo, Ohio | PP Consultant",
+    "text": "{\n  \"company_name\": \"Owens Corning, Toledo, Ohio\",\n  \"job_title\": \"PP Consultant\",\n  \"start_date\": \"Feb 2012\",\n  \"end_date\": \"May 2012\",\n  \"is_current\": false,\n  \"location\": \"Toledo, Ohio\",\n  \"department\": null,\n  \"employment_type\": null,\n  \"duration\": null,\n  \"responsibilities\": [\n    \"Role - PP Consultant, responsible for deliverable in PP area, including, Client Interaction, Configuration, Data Conversion, (Material Master, BOM, Recipe), Interface Design, Enhancement, Coordination with APO, CRM and other ECC team, testing\",\n    \"Area of work - Master Data, MR Planning/ Demand Management, S&OP, Flexible Planning, Transfer of Demand, Planned Independent and Dependent requirement, Production Scheduling, Capacity Evaluation , Shop Floor Execution, Order Management, Process Management\",\n    \"Also worked on PM Master Data\"\n  ],\n  \"achievements\": [],\n  \"technologies_used\": [],\n  \"description\": null,\n  \"projects\": []\n}",
+    "input_tokens": 2390,
+    "output_tokens": 224,
+    "truncated": false
+   }
+  ],
+  "c694fe2d0c5d5961": [
+   {
+    "hint": "Extract work experience for: Global Specialty Metals, Marietta, OH | SAP PP/MM/QM",
+    "text": "{\n  \"company_name\": \"Global Specialty Metals, Marietta, OH\",\n  \"job_title\": \"SAP PP/MM/QM\",\n  \"start_date\": \"Sep 2012\",\n  \"end_date\": \"Nov 2012\",\n  \"is_current\": false,\n  \"location\": \"Marietta, OH\",\n  \"department\": null,\n  \"employment_type\": null,\n  \"duration\": null,\n  \"responsibilities\": [\n    \"Role - Consulting Supply Chain MM/ PP / QM, end to end design and support. Supported Go live and hyper care.\",\n    \"PP -\",\n    \"Order Management, Functional Design for Interfaces, IDOC enhancement, Labels, Testing, Roll Outs and Hyper Care, Shop Floor Execution\",\n    \"Testing Functional Spec for Enhancement and Interfaces\",\n    \"MM - Purchase Scenarios, Including Direct Vendor and Inter Plant STO\",\n    \"QM - QM for Purchased and Finished Goods\"\n  ],\n  \"achievements\": [],\n  \"technologies_used\": [],\n  \"description\": null,\n  \"projects\": [\n    {\n      \"projectName\": null,\n      \"clientName\": \"Mylan Pharmaceuticals, Morgantown, WV (HO Pittsburgh, PA)\",\n      \"projectLocation\": null,\n      \"keyTechnologies\": null,\n      \"projectResponsibilities\": []\n    }\n  ]\n}",
+    "input_tokens": 2399,
+    "output_tokens": 271,
+    "truncated": false
+   }
+  ],
+  "3900c71155ec3153": [
+   {
+    "hint": "Extract work experience for: Mylan Labs | SAP PP QM",
+    "text": "{\n  \"company_name\": \"Mylan Labs\",\n  \"job_title\": \"SAP PP QM\",\n  \"start_date\": \"May 2012\",\n  \"end_date\": \"Sep 2012\",\n  \"is_current\": false,\n  \"location\": null,\n  \"department\": null,\n  \"employment_type\": null,\n  \"duration\": null,\n  \"responsibilities\": [\n    \"Worked for a project for generating PI sheet and integration with Weighing scale to get data related to active ingredients\",\n    \"Design, FSPEC, testing UAT and deployment\"\n  ],\n  \"achievements\": [],\n  \"technologies_used\": [],\n  \"description\": null,\n  \"projects\": []\n}",
+    "input_tokens": 2364,
+    "output_tokens": 146,
+    "truncated": false
+   }
+  ],
+  "771306efa5ec8a4e": [
+   {
+    "hint": "Extract work experience for: Crown Equipment | SAP PP Consultant",
+    "text": "{\n  \"company_name\": \"Crown Equipment\",\n  \"job_title\": \"SAP PP Consultant\",\n  \"start_date\": \"Jun 2015\",\n  \"end_date\": \"Nov 2015\",\n  \"is_current\": false,\n  \"location\": null,\n  \"department\": null,\n  \"employment_type\": null,\n  \"duration\": null,\n  \"responsibilities\": [\n    \"SAP PP Consultant, overseeing the Manufacturing Execution and Integration with MM / WM SAP ME/MII, and integration with Sales / Procurement /WM\",\n    \"Configuration and Customization in PP / Shop Floor Execution\",\n    \"Production Order Management, Planned Order, Production Order Create Release and Confirmation, Print, Goods Receipt and Goods Issue, TECO, Batch Jobs\",\n    \"Data Conversion design for Open Production Orders\",\n    \"Rework Order\",\n    \"Material Staging and Goods Movement\",\n    \"Integration with MM/WM/QM and CO\",\n    \"External Process Purchase Order and Sub Contracting Purchase Order\",\n    \"Batch Job set up for Order Create, Release, Confirmation and TECO\",\n    \"Functional Testing for Enhancement and Print Customization\",\n    \"Supported Go Live Hyper care\",\n    \"The project developed a Global Template and will be used for roll outs to other Plants\"\n  ],\n  \"achievements\": [],\n  \"technologies_used\": [\n    \"SAP PP\",\n    \"SAP ME/MII\",\n    \"MM\",\n    \"WM\",\n    \"QM\",\n    \"CO\"\n  ],\n  \"description\": null,\n  \"projects\": []\n}",
+    "input_tokens": 2431,
+    "output_tokens": 316,
+    "truncated": false
+   }
+  ],
+  "102fcd367fb15b73": [
+   {
+    "hint": "Extract work experience for: Sanofi Aventis | Solution Architect for SAP Process Data Ware",
+    "text": "{\n  \"company_name\": \"Sanofi Aventis\",\n  \"job_title\": \"Solution Architect for SAP Process Data Warehouse for MM/ PP /, QM\",\n  \"start_date\": \"Nov 2012\",\n  \"end_date\": \"Jun 2013\",\n  \"is_current\": false,\n  \"location\": null,\n  \"department\": null,\n  \"employment_type\": null,\n  \"duration\": null,\n  \"responsibilities\": [\n    \"Requirement Gathering, Workshops\",\n    \"Functional Specification\",\n    \"Configuration and Coordination with development team in ABAP, MES, LIMS. MII and TIBCO\",\n    \"Test execution and client approval\"\n  ],\n  \"achievements\": [],\n  \"technologies_used\": [\n    \"SAP ECC\",\n    \"LIMS\",\n    \"MES\",\n    \"ABAP\",\n    \"MII\",\n    \"TIBCO\"\n  ],\n  \"description\": \"Area of work SAP Supply Chain Manufacturing PP and Quality Management includes applications like SAP ECC, LIMS. MES, Shop Floor Data.\\nThe QM work includes Finished Product Analysis, Inspection Lot, Usage Decision, Interface with LIMS\\nDesigning a Process Management Solution with Transactional data from SAP, LIMS, MES etc, with heavy data exchange between these systems. The transactions include the entire cycle for Manufacturing Execution and Quality Cycle.\",\n  \"projects\": []\n}",
+    "input_tokens": 2431,
+    "output_tokens": 281,
+    "truncated": false
+   }
+  ],
+  "90291265f266492d": [
+   {
+    "hint": "Extract work experience for: Cardinal Health, Dublin, Ohio | SAP Consultant MM (PTP)",
+    "text": "{\n  \"company_name\": \"Cardinal Health\",\n  \"job_title\": \"SAP Consultant MM (PTP)\",\n  \"start_date\": \"Nov - 2010\",\n  \"end_date\": \"Feb 2012\",\n  \"is_current\": false,\n  \"location\": \"Dublin, Ohio\",\n  \"department\": null,\n  \"employment_type\": null,\n  \"duration\": null,\n  \"responsibilities\": [\n    \"End to end design for Data Conversion and Interface Material Master, QM Data, Inventory/WM, Demand Planning, Sales Order History for forecast Sales Request Data from Legacy and subsequent downstream system.\",\n    \"The Data Conversion consisted of setting up rules for MDM, and Data Governance for Material Master\",\n    \"Responsible for gathering business requirement, Functional Specification, Mapping, Interaction with ETL and ABAP team to design conversion including MDM, Data Governance, conversion rules, staging, conversion, testing, SAP Configuration for successful conversion without error. and sign off.\",\n    \"Successfully designed conversion for Material, Planning, Inventory/WM, Sales Order History for Demand Planning data going to ECC, BW and APO.\",\n    \"Designed Validation rules to make sure the data quality was good.\",\n    \"For Inventory conversion dealt with stocked managed with Serial Numbers (serialized).\"\n  ],\n  \"achievements\": [],\n  \"technologies_used\": [\n    \"MDM\",\n    \"SAP\",\n    \"ECC\",\n    \"BW\",\n    \"APO\",\n    \"ETL\",\n    \"ABAP\"\n  ],\n  \"description\": null,\n  \"projects\": []\n}",
+    "input_tokens": 2460,
+    "output_tokens": 321,
+    "truncated": false
+   }
+  ],
+  "0cd9900330b79f6e": [
+   {
+    "hint": "Extract work experience for: Limited Brands, (Victoria's Secret / Bath and Body Works) | A",
+    "text": "{\n  \"company_name\": \"Limited Brands, (Victoria's Secret / Bath and Body Works)\",\n  \"job_title\": \"Application Consultant, Master Data\",\n  \"start_date\": \"Jun'07\",\n  \"end_date\": \"Jan' 09\",\n  \"is_current\": false,\n  \"location\": null,\n  \"department\": null,\n  \"employment_type\": null,\n  \"duration\": null,\n  \"responsibilities\": [\n    \"Implementation and enhancement/ Support of SAP ECC 5.0\",\n    \"Master Data Management / Data Governance/ Data Conversion/ PLM - Article (Material), Vendor, PIR, Open PO, Inventory\",\n    \"MDM Tool for Article Master - the tool is designed to create Article Master - Retail) involving Staging, jobs and workflow. The tool is a front end tool, which is integrated with SAP, and creates Article, Generic and Variants, followed by Listing to DCs, creation of PIR, CAIR, Royalty Conditions, This tool Ensures the data quality and approval.\",\n    \"Archiving - Design for archiving and deleting obsolete data.\",\n    \"Data Governance - Designed programs to monitor Data quality e mail messages.\",\n    \"Data Modeling\",\n    \"Responsible for Solution Delivery Competency, for resolving issues related to SAP System, and related Legacy system.\",\n    \"To document, test, and implement any enhancement required\",\n    \"Customized and configured the SAP System as per the business requirement. (New requirement and modification to the existing set up)\",\n    \"To oversee the jobs which exchanges data between different systems, Optiva, Flex PLM, SAP, and other legacy system, and resolve issues.\",\n    \"Article fields - Definition of important field including UOM, Product Hierarchy, Material Group, EAN, / GTIN, Serial Number Profile for Serialization.\"\n  ],\n  \"achievements\": [],\n  \"technologies_used\": [\n    \"SAP ECC 5.0\",\n    \"SAP\",\n    \"Optiva\",\n    \"Flex PLM\"\n  ],\n  \"description\": null,\n  \"projects\": []\n}",
+    "input_tokens": 2589,
+    "output_tokens": 424,
+    "truncated": false
+   }
+  ],
+  "8b008e959878fda8": [
+   {
+    "hint": "Extract work experience for: Siemens Information Systems Ltd. | SAP PP Consultant",
+    "text": "{\n  \"company_name\": \"Siemens Information Systems Ltd.\",\n  \"job_title\": \"SAP PP Consultant\",\n  \"start_date\": \"Apr' 03\",\n  \"end_date\": \"Jun' 03\",\n  \"is_current\": false,\n  \"location\": \"India\",\n  \"department\": null,\n  \"employment_type\": null,\n  \"duration\": null,\n  \"responsibilities\": [],\n  \"achievements\": [],\n  \"technologies_used\": [],\n  \"description\": null,\n  \"projects\": []\n}",
+    "input_tokens": 2288,
+    "output_tokens": 109,
+    "truncated": false
+   }
+  ],
+  "e935b5bd3055abe8": [
+   {
+    "hint": "Extract work experience for: CVS IT Services | SAP Consultant PP and VC",
+    "text": "{\n  \"company_name\": \"CVS IT Services\",\n  \"job_title\": \"SAP Consultant PP and VC\",\n  \"start_date\": \"Oct' 02\",\n  \"end_date\": \"Apr' 03\",\n  \"is_current\": false,\n  \"location\": \"India\",\n  \"department\": null,\n  \"employment_type\": null,\n  \"duration\": null,\n  \"responsibilities\": [],\n  \"achievements\": [],\n  \"technologies_used\": [],\n  \"description\": null,\n  \"projects\": []\n}",
+    "input_tokens": 2292,
+    "output_tokens": 110,
+    "truncated": false
+   }
+  ],
+  "82243ee3461af96c": [
+   {
+    "hint": "Extract work experience for: IBM Global Services | Sr. Consultant SAP Material Management",
+    "text": "{\n  \"company_name\": \"IBM Global Services\",\n  \"job_title\": \"Sr. Consultant SAP Material Management\",\n  \"start_date\": \"Apr'05\",\n  \"end_date\": \"Mar'06\",\n  \"is_current\": false,\n  \"location\": \"NJ, USA\",\n  \"department\": null,\n  \"employment_type\": null,\n  \"duration\": null,\n  \"responsibilities\": [\n    \"Global Support and Enhancement for Procure to pay\",\n    \"Adding new functionality\",\n    \"Functional Spec for Enhancement\",\n    \"Supported - MM P2P- Purchase Requisition (Material & Service), PO, GR, Invoice Receipt, Invoice Discrepancy, Release Strategy, Workflow\",\n    \"Supported - HR- Master Data, Time Reporting, Assignment of Activity, BW - HR and Finance Reports\",\n    \"Functional Specs for new requirements, testing, sign off, and user acceptance test\",\n    \"User Acceptance test and training\",\n    \"Vendor Master maintenance\"\n  ],\n  \"achievements\": [],\n  \"technologies_used\": [],\n  \"description\": null,\n  \"projects\": [\n    {\n      \"projectName\": \"Global Support and Enhancement\",\n      \"clientName\": \"Johnson & Johnson\",\n      \"projectLocation\": \"NJ, USA\",\n      \"keyTechnologies\": null,\n      \"projectResponsibilities\": [\n        \"Global Support and Enhancement for Procure to pay\",\n        \"Adding new functionality\",\n        \"Functional Spec for Enhancement\",\n        \"Supported - MM P2P- Purchase Requisition (Material & Service), PO, GR, Invoice Receipt, Invoice Discrepancy, Release Strategy, Workflow\",\n        \"Supported - HR- Master Data, Time Reporting, Assignment of Activity, BW - HR and Finance Reports\",\n        \"Functional Specs for new requirements, testing, sign off, and user acceptance test\",\n        \"User Acceptance test and training\",\n        \"Vendor Master maintenance\"\n      ]\n    }\n  ]\n}",
+    "input_tokens": 2364,
+    "output_tokens": 395,
+    "truncated": false
+   }
+  ],
+  "c5d6508e2095c6d2": [
+   {
+    "hint": "Extract work experience for: C.J.Gelatin Products Ltd. | General Manager for Production an",
+    "text": "{\n  \"company_name\": \"C.J.Gelatin Products Ltd.\",\n  \"job_title\": \"General Manager for Production and Quality Control\",\n  \"start_date\": \"Feb' 01\",\n  \"end_date\": \"Oct' 01\",\n  \"is_current\": false,\n  \"location\": \"Bhopal, India\",\n  \"department\": null,\n  \"employment_type\": null,\n  \"duration\": null,\n  \"responsibilities\": [],\n  \"achievements\": [],\n  \"technologies_used\": [],\n  \"description\": null,\n  \"projects\": []\n}",
+    "input_tokens": 2317,
+    "output_tokens": 119,
+    "truncated": false
+   }
+  ],
+  "022d751a90edcfe9": [
+   {
+    "hint": "Extract work experience for: Training/ Development /Self employed | None",
+    "text": "{\n  \"company_name\": \"Self employed\",\n  \"job_title\": \"Training/ Development\",\n  \"start_date\": \"Nov '01\",\n  \"end_date\": \"Sep' 02\",\n  \"is_current\": false,\n  \"location\": null,\n  \"department\": null,\n  \"employment_type\": null,\n  \"duration\": null,\n  \"responsibilities\": [\n    \"Analysis of Business Process and suggesting the client for best Manufacturing Practices\",\n    \"Analysis of ERP requirements\"\n  ],\n  \"achievements\": [],\n  \"technologies_used\": [],\n  \"description\": null,\n  \"projects\": []\n}",
+    "input_tokens": 2258,
+    "output_tokens": 128,
+    "truncated": false
+   }
+  ],
+  "56ecf12d4cedffcf": [
+   {
+    "hint": "Extract work experience for: Rama Industries Ltd. | Head of Technical Services and Dy. Man",
+    "text": "{\n  \"company_name\": \"Rama Industries Ltd.\",\n  \"job_title\": \"Head of Technical Services and Dy. Manager.\",\n  \"start_date\": \"Feb' 99\",\n  \"end_date\": \"Feb' 01\",\n  \"is_current\": false,\n  \"location\": \"Patiala, India\",\n  \"department\": null,\n  \"employment_type\": null,\n  \"duration\": null,\n  \"responsibilities\": [],\n  \"achievements\": [],\n  \"technologies_used\": [],\n  \"description\": null,\n  \"projects\": []\n}",
+    "input_tokens": 2308,
+    "output_tokens": 116,
+    "truncated": false
+   }
+  ],
+  "aa76650ae77dc523": [
+   {
+    "hint": "Extract work experience for: Shaw Wallace Gelatines Ltd. | Sr. Executive Production and Pr",
+    "text": "{\n  \"company_name\": \"Shaw Wallace Gelatines Ltd.\",\n  \"job_title\": \"Sr. Executive Production and Process Control\",\n  \"start_date\": \"Feb' 90\",\n  \"end_date\": \"Feb' 99\",\n  \"is_current\": false,\n  \"location\": \"Jabalpur, India\",\n  \"department\": null,\n  \"employment_type\": null,\n  \"duration\": null,\n  \"responsibilities\": [],\n  \"achievements\": [],\n  \"technologies_used\": [],\n  \"description\": null,\n  \"projects\": []\n}",
+    "input_tokens": 2319,
+    "output_tokens": 119,
+    "truncated": false
+   }
+  ],
+  "4a65efa1231b107a": [
+   {
+    "hint": "Extract work experience for: Torrent Pharma Ltd. | SAP PP Consultant",
+    "text": "{\n  \"company_name\": \"Torrent Pharma Ltd.\",\n  \"job_title\": \"SAP PP Consultant\",\n  \"start_date\": \"Apr 03\",\n  \"end_date\": \"Jun 03\",\n  \"is_current\": false,\n  \"location\": null,\n  \"department\": null,\n  \"employment_type\": null,\n  \"duration\": null,\n  \"responsibilities\": [\n    \"Analyzed Business Process\",\n    \"Involved in Configuration and creation of Material, Resource, Master Recipe, BOM\",\n    \"Configured different Inspection Types for Raw Material, In process and finished product.\",\n    \"Shelf life, Discontinued material\",\n    \"Worked on Master Inspection Characteristics, Demand Management, Planned Independent Requirement, MRP, Availability Check\",\n    \"Order Management - Worked on Process Order, Creation, Release and Confirmation\",\n    \"Involved in Integration Testing with SD, MM, CO, QM\"\n  ],\n  \"achievements\": [],\n  \"technologies_used\": [],\n  \"description\": null,\n  \"projects\": []\n}",
+    "input_tokens": 2364,
+    "output_tokens": 209,
+    "truncated": false
+   }
+  ],
+  "295b105fc1cfda46": [
+   {
+    "hint": "Extract work experience for: Johnson and Johnson at NJ, USA | SAP Integration Lead MM/PP/I",
+    "text": "{\n  \"company_name\": \"Johnson and Johnson\",\n  \"job_title\": \"SAP Integration Lead MM/PP/Interfaces/Integration/MDM\",\n  \"start_date\": \"Feb'09\",\n  \"end_date\": \"Nov' 10\",\n  \"is_current\": false,\n  \"location\": \"NJ, USA\",\n  \"department\": null,\n  \"employment_type\": null,\n  \"duration\": null,\n  \"responsibilities\": [\n    \"Responsible for Configuration/ Enhancement / Interfaces Process in areas of MM (P2P) / PP/ Inventory/WM, Quality Management, Planning,\",\n    \"Master Data Management for Material Master and setting up rules for Data Governance for data maintenance and interface between MDM and SAP ECC.\",\n    \"Responsible for Configuration/ Enhancement / Interfaces Process in areas of MM (P2P)/ PP, Inventory/WM, Quality Management, Planning,\",\n    \"Master / Transactional Data design - for Manufacture and Planning/Production Planning, Production Orders/Process Order, Batch Master, Inventory including Material Master Maintenance and Classification.\",\n    \"Interfaces with legacy systems and other SAP systems, instances - which have end to end business process, using middleware webMethods, SAP XI (PI), EDI, with Legacy systems and also SAP ECC- SAP SNC, SAP APO,\",\n    \"Important Legacy to be interfaced with SAP - Labpas, PLC, LIMS, WMS, MES, SAP FI system instance, SNC.\",\n    \"Designed more than 65 Interfaces in this project for exchange of day to day data and Master Data including Material, Vendor and Finance Master Data.\",\n    \"Data extraction for reporting.\",\n    \"Production Planning -Demand Management, Independent and Dependent requirement, Shop Floor Execution, Production and Process Order, Data Conversion for Open Production/Process Order, Work Center/Resources, Routing/Recipe, KANBAN processing for Production Order, Control Instructions, Process Management, Process Management/ instruction using X Steps (including X Steps Parameters, Process Instruction Electronic Batch Record to generate all the process and quality history, signature strategy, Batch Management Cockpit and Interface to MES and Electronic Work Instruction.\",\n    \"Procurement - Vendor Master, Purchase Order, Goods Receipt, Invoice, AP\",\n    \"Quality Management - Master Inspection Plan, Inspection Lot, Results, Non Conformance.\",\n    \"Batch Management. Batch Derivation\",\n    \"Managed and Lead team meetings for Business Requirement\",\n    \"Managed and Lead meeting for functional and technical design\",\n    \"Approved functional Specifications related to PP, QM, Inventory Management Process and coordinated with web Method team for the interface design.\",\n    \"Data Conversion - Resolved issues related to data load for Objects related to these areas.\",\n    \"Integration Testing - End to end integration testing for PP, MM\",\n    \"KANBAAN - Master Data and Configuration, RF based WM goods issue and triggering Order (Make or buy)..\",\n    \"Unit test and End to end test scenario in PP/PP and MM/IM.WM\",\n    \"Documentation / BPP\"\n  ],\n  \"achievements\": [],\n  \"technologies_used\": [\n    \"webMethods\",\n    \"SAP XI (PI)\",\n    \"EDI\",\n    \"SAP ECC\",\n    \"SAP SNC\",\n    \"SAP APO\"\n  ],\n  \"description\": null,\n  \"projects\": []\n}",
+    "input_tokens": 2865,
+    "output_tokens": 672,
+    "truncated": false
+   }
+  ],
+  "46e33a7587ccd64b": [
+   {
+    "hint": "Extract work experience for: Ispat Industries Ltd. | SAP Consultant PP and VC",
+    "text": "{\n  \"company_name\": \"Ispat Industries Ltd.\",\n  \"job_title\": \"SAP Consultant PP and VC\",\n  \"start_date\": \"Oct 02\",\n  \"end_date\": \"Apr 03\",\n  \"is_current\": false,\n  \"location\": null,\n  \"department\": null,\n  \"employment_type\": null,\n  \"duration\": null,\n  \"responsibilities\": [\n    \"Business Process Analysis\",\n    \"As is and to be analysis\",\n    \"Customized and Configured as per the requirement\",\n    \"Jobs one in the area of Material Requirement Planning, Order Management, Shop Floor Control, Process Management, Batch Management, Class and Characteristics\",\n    \"PP Master Data Resource/Mater Recipe\",\n    \"Process Order - Order Management Order Type, Order Type Dependant Parameters, Recipe, BOM, Operations, Task List Selection, BOM Selection, Availability Check, Batch Determination, Scheduling, Confirmation\",\n    \"Process Management/ PI Sheet - Characteristics Group, Characteristics, User Exit, Process Instruction - Characteristics Group, Characteristics, PI Category\",\n    \"Extensively worked on Master data creation (Material, Bill of Material, Resource, Master Recipe)\",\n    \"Worked on Demand Management especially in the area of transfer of requirements, Planned Independent Requirement, MRP, and Availability Check.\",\n    \"Integration Testing with SD, MM, CO, QM\",\n    \"Interaction Core Users and Training to end users\",\n    \"Classification data for VC\"\n  ],\n  \"achievements\": [],\n  \"technologies_used\": [],\n  \"description\": null,\n  \"projects\": []\n}",
+    "input_tokens": 2464,
+    "output_tokens": 320,
+    "truncated": false
+   }
+  ],
+  "3591991575a51120": [
+   {
+    "hint": "Extract work experience for: Jacklinks, MN | Lead Supply Chain Consultant for SAP PP /MM/Q",
+    "text": "{\n  \"company_name\": \"Jacklinks, MN\",\n  \"job_title\": \"Lead Supply Chain Consultant for SAP PP /MM/QM/WM\",\n  \"start_date\": \"Aug 2013\",\n  \"end_date\": \"Jun 2015\",\n  \"is_current\": false,\n  \"location\": \"MN\",\n  \"department\": null,\n  \"employment_type\": null,\n  \"duration\": null,\n  \"responsibilities\": [\n    \"Responsible for Roll Outs, Enhancement and Support\",\n    \"Configuration, Functional Design for Interfaces, IDOC enhancement, Labels, Testing, Roll Outs and Hyper Care, RF Design (Configuration) for Materials Movement, Production Planning, Shop Floor Execution (Order Management), MRP, Goods Movement, Interfaces, IDOC, Label Print, Customized Reports for life cycle\",\n    \"Demand Management, S&OP, Flexible Planning, Transfer of Demand, Planned Independent and Dependent requirement, Production Scheduling, Make to stock\",\n    \"Writing Functional Spec for Enhancement and Interfaces.\",\n    \"Batch Job for Order Create, Release, Confirm, TECO\",\n    \"Batch Job for MRP Run\",\n    \"Quality management set up for Purchased and finished goods. Configuration and design for Quality Inspection, Inspection Lot, Inspection Stock, Usage decision\",\n    \"This was a Roll Out within USA and Europe, and Support for the Plants already went live\",\n    \"Roll out - New Plants\",\n    \"Design of Enterprise Structure\",\n    \"Designed Purchase Order for Components and Raw Materials from External Vendor\",\n    \"Designed Stock Transfer Order for Semi Finished Goods between Plants and Storage Locations.\",\n    \"Set up Master Data, Vendor Master, Infor Records\",\n    \"Designed Output Determination, and customized forms for Purchase Documents\",\n    \"Designed RF Scan and Labels upon Goods Receipt\",\n    \"Designed Batch Derivation to copy the actual date of Manufacturing and shelf life from Raw Material to next level.\"\n  ],\n  \"achievements\": [],\n  \"technologies_used\": [\n    \"SAP PP\",\n    \"SAP MM\",\n    \"SAP QM\",\n    \"SAP WM\",\n    \"IDOC\",\n    \"RF\"\n  ],\n  \"description\": \"The client is one of the Global Leader in Food Sector\",\n  \"projects\": []\n}",
+    "input_tokens": 2584,
+    "output_tokens": 455,
+    "truncated": false
+   }
+  ],
+  "5fc22dde3a169d22": [
+   {
+    "hint": "Extract work experience for: IBM Global Services | Sr. Consultant - Matériel Master / SAP ",
+    "text": "{\n  \"company_name\": \"IBM Global Services\",\n  \"job_title\": \"Sr. Consultant - Matériel Master / SAP PP\",\n  \"start_date\": \"Apr'06\",\n  \"end_date\": \"Jun' 07\",\n  \"is_current\": false,\n  \"location\": \"NJ, USA\",\n  \"department\": null,\n  \"employment_type\": null,\n  \"duration\": null,\n  \"responsibilities\": [\n    \"Requirement gathering and GAP analysis\",\n    \"Configuration of Process Order Management\",\n    \"Leading the Design - Configuration and owning FS for gaps\",\n    \"Data Conversion and design for Material Master, BOM, Resource, Recipe\",\n    \"Design and build of Batch Management\",\n    \"Unit test and Integration test, UAT, Training and sign off\",\n    \"Interface Design\",\n    \"Coordination with the Development team\",\n    \"Designed MDM approach, data governance and data modeling for Material Master and Manufacturing Master Data.\",\n    \"Organized Global workshops and gathered User Requirements,\",\n    \"Organized workshops with core team members across different functions, to explain the fields and decide the ownership.\",\n    \"Integration meeting and co ordination\",\n    \"Master Data\",\n    \"Shop Floor Execution and Order Management\",\n    \"PP - Master Data, Resource, Master Recipe\",\n    \"Process Management / PI Sheet - Characteristics Group, Characteristics, User Exit, Process Instruction - Characteristics Group, Characteristics, PI Category\",\n    \"Material Master, including new screens for custom fields, Setting for Key fields, EAN, Product Hierarchy, Serial Number Profile (Serialization)\",\n    \"Batch Management, Batch Search Strategy, Batch Derivation.\",\n    \"Electronic Batch Record (EBR), Signature Strategy\",\n    \"Enhancement of Material Master screen\",\n    \"Functional specification for Data Mapping for Material Master, BOM, Resource, Recipe, ECM.\",\n    \"Functional Specification for Updating Material Master from Legacy System\",\n    \"Functional Specs for Batch Management, Material Master Workflow, Interface with legacy systems, Custom Views and Fields in Material Master\",\n    \"Defined conversion rules for Material Master upload from legacy system. (Data Conversion Specification) and Coordination with Back office Associates for Data Conversion.\",\n    \"PI Sheets\",\n    \"Workflow design for Material Master Creation.\",\n    \"Documented Configuration, Functional Requirement Specifications, Data Migration Requirement, Functional Specification in Solution Manager.\",\n    \"Change and Document Management, activation of Revision Level\",\n    \"Data Conversion and Mapping (Cransoft)\",\n    \"Defined conversion rules for BOM, Recipe, Resources (Data Conversion Specification) and Coordination with Back office Associates for Data Conversion\"\n  ],\n  \"achievements\": [],\n  \"technologies_used\": [\n    \"SAP Material Master\",\n    \"PP\",\n    \"MM\",\n    \"PM\",\n    \"BOM\",\n    \"ECM\",\n    \"PI Sheets\",\n    \"Solution Manager\",\n    \"Cransoft\"\n  ],\n  \"description\": \"SAP Material Master - Global Template and process design for Material Master Data governance.\",\n  \"projects\": [\n    {\n      \"projectName\": null,\n      \"clientName\": \"Merck\",\n      \"projectLocation\": \"NJ, USA\",\n      \"keyTechnologies\": null,\n      \"projectResponsibilities\": [\n        \"Requirement gathering and GAP analysis\",\n        \"Configuration of Process Order Management\",\n        \"Leading the Design - Configuration and owning FS for gaps\",\n        \"Data Conversion and design for Material Master, BOM, Resource, Recipe\",\n        \"Design and build of Batch Management\",\n        \"Unit test and Integration test, UAT, Training and sign off\",\n        \"Interface Design\",\n        \"Coordination with the Development team\",\n        \"Designed MDM approach, data governance and data modeling for Material Master and Manufacturing Master Data.\",\n        \"Organized Global workshops and gathered User Requirements,\",\n        \"Organized workshops with core team members across different functions, to explain the fields and decide the ownership.\",\n        \"Integration meeting and co ordination\",\n        \"Master Data\",\n        \"Shop Floor Execution and Order Management\",\n        \"PP - Master Data, Resource, Master Recipe\",\n        \"Process Management / PI Sheet - Characteristics Group, Characteristics, User Exit, Process Instruction - Characteristics Group, Characteristics, PI Category\",\n        \"Material Master, including new screens for custom fields, Setting for Key fields, EAN, Product Hierarchy, Serial Number Profile (Serialization)\",\n        \"Batch Management, Batch Search Strategy, Batch Derivation.\",\n        \"Electronic Batch Record (EBR), Signature Strategy\",\n        \"Enhancement of Material Master screen\",\n        \"Functional specification for Data Mapping for Material Master, BOM, Resource, Recipe, ECM.\",\n        \"Functional Specification for Updating Material Master from Legacy System\",\n        \"Functional Specs for Batch Management, Material Master Workflow, Interface with legacy systems, Custom Views and Fields in Material Master\",\n        \"Defined conversion rules for Material Master upload from legacy system. (Data Conversion Specification) and Coordination with Back office Associates for Data Conversion.\",\n        \"PI Sheets\",\n        \"Workflow design for Material Master Creation.\",\n        \"Documented Configuration, Functional Requirement Specifications, Data Migration Requirement, Functional Specification in Solution Manager.\",\n        \"Change and Document Management, activation of Revision Level\",\n        \"Data Conversion and Mapping (Cransoft)\",\n        \"Defined conversion rules for BOM, Recipe, Resources (Data Conversion Specification) and Coordination with Back office Associates for Data Conversion\"\n      ]\n    }\n  ]\n}",
+    "input_tokens": 2815,
+    "output_tokens": 1087,
+    "truncated": false
+   }
+  ],
+  "8830cc1989f05408": [
+   {
+    "hint": "Extract work experience for: IBM Global Services | Sr. Consultant for Logistics (PP, MM, S",
+    "text": "{\n  \"company_name\": \"IBM Global Services\",\n  \"job_title\": \"Sr. Consultant for Logistics (PP, MM, SD, QM), PS and VC\",\n  \"start_date\": \"Aug'03\",\n  \"end_date\": \"Dec'03\",\n  \"is_current\": false,\n  \"location\": null,\n  \"department\": null,\n  \"employment_type\": null,\n  \"duration\": null,\n  \"responsibilities\": [\n    \"Configuration and release\",\n    \"Validation of Configuration (Unit test and Integrity test)\",\n    \"Analyzed the new business requirement, Customized as the design\",\n    \"Coordinated with other team members for testing\",\n    \"Releasing the changes\"\n  ],\n  \"achievements\": [],\n  \"technologies_used\": [],\n  \"description\": null,\n  \"projects\": [\n    {\n      \"projectName\": \"Up gradE From Version 4.5 to 4.7\",\n      \"clientName\": \"Tetra Pak, Sweden\",\n      \"projectLocation\": null,\n      \"keyTechnologies\": null,\n      \"projectResponsibilities\": [\n        \"Configuration and release\",\n        \"Validation of Configuration (Unit test and Integrity test)\",\n        \"Analyzed the new business requirement, Customized as the design\",\n        \"Coordinated with other team members for testing\",\n        \"Releasing the changes\"\n      ]\n    }\n  ]\n}",
+    "input_tokens": 2370,
+    "output_tokens": 284,
+    "truncated": false
+   }
+  ],
+  "6ecdda73d1d961d0": [
+   {
+    "hint": "Extract work experience for: IBM Global Services | Sr. Consultant - Production Planning, M",
+    "text": "{\n  \"company_name\": \"IBM Global Services\",\n  \"job_title\": \"Sr. Consultant - Production Planning, Materials Management, Variant Configuration\",\n  \"start_date\": \"Jan'04\",\n  \"end_date\": \"Mar'05\",\n  \"is_current\": false,\n  \"location\": \"Stockholm, Sweden\",\n  \"department\": null,\n  \"employment_type\": null,\n  \"duration\": null,\n  \"responsibilities\": [\n    \"Sr. Consultant Logistics responsible for MDM, Variant Configuration, PP/VC, and MM/VC for Variants and Team Coordinator\",\n    \"Business Process analysis, Analysis of functionality and generating development requirement\",\n    \"Configuration\",\n    \"Functional Specification, Testing, UAT, Sign off for Enhancement Release Cycle\",\n    \"Global Support for the part already implemented\",\n    \"As part of MDM team designed the data for Variant Configuration and interface with ECC.\",\n    \"BOM and using Object dependencies\",\n    \"Enhancement of the program for transaction codes related to VC data transfer and BOM between two logical systems.\",\n    \"Functional design and Specification.\",\n    \"Testing of the Enhancement.\",\n    \"Production Planning, Shop Floor Control\"\n  ],\n  \"achievements\": [],\n  \"technologies_used\": [\n    \"SAP\",\n    \"PP\",\n    \"MM\",\n    \"VC\",\n    \"SD\",\n    \"ECC\",\n    \"MDM\",\n    \"BOM\"\n  ],\n  \"description\": \"Ericsson is the Global Leader in Providing Telecom Services. It has local as well as Global SAP Solutions. I worked as SAP Sr. Consultant PP/MM, VC, and integration with SD for Enhancement, Global Roll outs and Production Support.\",\n  \"projects\": [\n    {\n      \"projectName\": \"Global Support, Implementation and Enhancement\",\n      \"clientName\": \"Ericsson\",\n      \"projectLocation\": \"Stockholm, Sweden\",\n      \"keyTechnologies\": null,\n      \"projectResponsibilities\": [\n        \"Sr. Consultant Logistics responsible for MDM, Variant Configuration, PP/VC, and MM/VC for Variants and Team Coordinator\",\n        \"Business Process analysis, Analysis of functionality and generating development requirement\",\n        \"Configuration\",\n        \"Functional Specification, Testing, UAT, Sign off for Enhancement Release Cycle\",\n        \"Global Support for the part already implemented\",\n        \"As part of MDM team designed the data for Variant Configuration and interface with ECC.\",\n        \"BOM and using Object dependencies\",\n        \"Enhancement of the program for transaction codes related to VC data transfer and BOM between two logical systems.\",\n        \"Functional design and Specification.\",\n        \"Testing of the Enhancement.\",\n        \"Production Planning, Shop Floor Control\"\n      ]\n    }\n  ]\n}",
+    "input_tokens": 2499,
+    "output_tokens": 550,
+    "truncated": false
+   }
+  ],
+  "88a025aacf05ebc6": [
+   {
+    "hint": "Job: Shaw Wallace Gelatines Ltd. | Sr. Executive Production and Process Control | Feb' 90–",
+    "text": "{\n  \"company_name\": \"Shaw Wallace Gelatines Ltd.\",\n  \"job_title\": \"Sr. Executive Production and Process Control\",\n  \"start_date\": \"Feb 1990\",\n  \"end_date\": \"Feb 1999\",\n  \"is_current\": false,\n  \"location\": \"Jabalpur, India\",\n  \"department\": null,\n  \"employment_type\": null,\n  \"duration\": null,\n  \"technologies_used\": [],\n  \"description\": null,\n  \"projects\": [],\n  \"achievements\": [],\n  \"responsibilities\": [\n    \"Qualified to become Assistant Professor in Chemistry/ Organic Chemistry\",\n    \"Certificates in TQM and ISO 9000 Quality System\",\n    \"Masters in Chemistry Rani Dugravati University, Jabalpur MP 1989\",\n    \"MBA - IGNOU - Delhi 1999\"\n  ]\n}",
+    "input_tokens": 309,
+    "output_tokens": 180,
+    "truncated": false
+   }
+  ]
+ }
+}

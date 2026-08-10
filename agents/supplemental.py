@@ -39,6 +39,7 @@ Rules:
   • Professional Memberships / Affiliations
   • Interests / Hobbies / Activities
 - projects: extract ANY standalone "Projects" / "Academic Projects" / "Personal Projects" / "Key Projects" section, with every bullet under each project copied verbatim into highlights[]. Do NOT skip this section when it exists. (Projects that are nested inside a specific job's work experience are handled elsewhere — only extract standalone project sections here.)
+- courses / training: ONLY from a section the resume heads "Courses", "Training", "Workshops" or similar. Certifications are extracted separately and must NOT be repeated here — if a line sits under a "Certifications" / "Licenses" / "Credentials" heading, leave it out of courses[] and training[] entirely. A credential listed once is listed once.
 """
 
 

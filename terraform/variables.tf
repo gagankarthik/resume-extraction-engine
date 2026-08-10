@@ -1,9 +1,3 @@
-variable "model_provider" {
-  type        = string
-  description = "LLM provider: openai or anthropic"
-  default     = "openai"
-}
-
 variable "openai_api_key" {
   type      = string
   sensitive = true
@@ -15,17 +9,6 @@ variable "openai_model" {
   # Matches what is actually deployed. The previous default of gpt-4o disagreed
   # with production, so reading this file gave the wrong answer about the model.
   default = "gpt-4.1-mini"
-}
-
-variable "anthropic_api_key" {
-  type      = string
-  sensitive = true
-  default   = ""
-}
-
-variable "anthropic_model" {
-  type    = string
-  default = "claude-opus-4-7"
 }
 
 variable "use_orchestrator" {

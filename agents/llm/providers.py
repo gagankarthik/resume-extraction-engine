@@ -1,10 +1,10 @@
 """
-Provider adapters.
+The OpenAI adapter, and the shape the rest of the pipeline sees.
 
-Each adapter turns one vendor's SDK response into the same `Completion`, so the
-rest of the pipeline never branches on which model is behind it. Adding a
-provider means adding a class here and one line in `build_provider` — no agent
-changes.
+Everything above this file works in `Completion`s and knows nothing about the
+SDK: what a response costs, whether it was cut off, and what it said. That
+boundary is worth keeping even with one vendor behind it, because it is what
+lets the test suite replay a recorded run in place of a real one.
 """
 from __future__ import annotations
 
@@ -18,7 +18,7 @@ from config import LLMSettings
 
 @dataclass(frozen=True, slots=True)
 class Completion:
-    """One model response, normalised across providers."""
+    """One model response, in the terms the pipeline cares about."""
 
     text: str
     input_tokens: int
@@ -29,8 +29,6 @@ class Completion:
 
     model: str
     provider: str
-    cache_read_tokens: int = 0
-    cache_creation_tokens: int = 0
 
     def usage(self) -> dict[str, Any]:
         return {
@@ -39,13 +37,16 @@ class Completion:
             "input_tokens": self.input_tokens,
             "output_tokens": self.output_tokens,
             "truncated": self.truncated,
-            "cache_read_tokens": self.cache_read_tokens,
-            "cache_creation_tokens": self.cache_creation_tokens,
         }
 
 
 class LLMProvider(Protocol):
-    """What the client needs from any model vendor."""
+    """What the client needs from whatever is answering.
+
+    The test suite supplies a recorded stand-in through this same interface, so
+    it is not an abstraction over vendors so much as the seam that makes the
+    pipeline testable without a network.
+    """
 
     name: str
 
@@ -61,12 +62,30 @@ class LLMProvider(Protocol):
     ) -> Completion: ...
 
 
-# The resume block is identical across the parallel section agents, so marking
-# it cacheable turns six full-price reads into one write and five cache hits.
-_CACHE_BLOCK_RE = re.compile(
-    r"(===\s*(?:RESUME(?:\s+TEXT)?|TEXT\s+SEGMENT)\s*===.*?===\s*END(?:\s+SEGMENT)?\s*===)",
-    re.DOTALL,
+# OpenAI renamed the output ceiling when the reasoning models landed: gpt-5 and
+# the o-series take `max_completion_tokens`, everything before them takes
+# `max_tokens`, and sending the wrong one is a 400 rather than a warning.
+#
+# The name pattern below is the first guess, not the authority. Model names are
+# not a stable API — a family this list has never heard of would be guessed
+# wrong and fail every call — so the guess is corrected at runtime from the
+# error the API itself returns, and remembered for the process. Getting it wrong
+# costs one retry, once, ever.
+_NEEDS_COMPLETION_TOKENS = re.compile(r"^(?:gpt-[5-9]|gpt-\d{2}|o[1-9])", re.I)
+
+_UNSUPPORTED_MAX_TOKENS = re.compile(
+    r"unsupported parameter:\s*'?(max_tokens|max_completion_tokens)'?", re.I
 )
+
+# model name -> the parameter that model actually accepts.
+_TOKEN_PARAM: dict[str, str] = {}
+
+
+def _token_param(model: str) -> str:
+    remembered = _TOKEN_PARAM.get(model)
+    if remembered is not None:
+        return remembered
+    return "max_completion_tokens" if _NEEDS_COMPLETION_TOKENS.match(model) else "max_tokens"
 
 
 @dataclass
@@ -102,14 +121,13 @@ class OpenAIProvider:
         json_mode: bool,
         timeout: float | None = None,
     ) -> Completion:
-        model = self.settings.openai_model
+        model = self.settings.model
         kwargs: dict[str, Any] = {
             "model": model,
             "messages": [
                 {"role": "system", "content": system},
                 {"role": "user", "content": user},
             ],
-            "max_tokens": max_tokens,
             "temperature": temperature,
         }
         if json_mode:
@@ -119,7 +137,7 @@ class OpenAIProvider:
         if timeout is not None and timeout != float("inf"):
             kwargs["timeout"] = timeout
 
-        resp = await self._get_client().chat.completions.create(**kwargs)
+        resp = await self._create(kwargs, model, max_tokens)
         choice = resp.choices[0]
 
         return Completion(
@@ -131,77 +149,27 @@ class OpenAIProvider:
             provider=self.name,
         )
 
+    async def _create(self, kwargs: dict[str, Any], model: str, max_tokens: int) -> Any:
+        """Send the request, correcting the output-ceiling parameter if it is wrong.
 
-@dataclass
-class AnthropicProvider:
-    settings: LLMSettings
-    name: str = "anthropic"
-    _client: Any = field(default=None, repr=False)
-
-    def _get_client(self) -> Any:
-        if self._client is None:
-            import anthropic
-
-            api_key = os.getenv("ANTHROPIC_API_KEY")
-            if not api_key:
-                raise RuntimeError("ANTHROPIC_API_KEY is not set.")
-            # See OpenAIProvider: retries belong to the layer that owns the clock.
-            self._client = anthropic.AsyncAnthropic(api_key=api_key, max_retries=0)
-        return self._client
-
-    @staticmethod
-    def _with_cache_breakpoint(user: str) -> Any:
-        """Mark the resume block cacheable, leaving the per-agent instructions hot."""
-        match = _CACHE_BLOCK_RE.search(user)
-        if not match:
-            return user
-
-        parts: list[dict[str, Any]] = []
-        head, block, tail = user[: match.start()], match.group(0), user[match.end() :]
-        if head.strip():
-            parts.append({"type": "text", "text": head})
-        parts.append({"type": "text", "text": block, "cache_control": {"type": "ephemeral"}})
-        if tail.strip():
-            parts.append({"type": "text", "text": tail})
-        return parts
-
-    async def complete(
-        self,
-        system: str,
-        user: str,
-        *,
-        max_tokens: int,
-        temperature: float,
-        json_mode: bool,
-        timeout: float | None = None,
-    ) -> Completion:
-        model = self.settings.anthropic_model
-        extra: dict[str, Any] = {}
-        if timeout is not None and timeout != float("inf"):
-            extra["timeout"] = timeout
-
-        resp = await self._get_client().messages.create(
-            model=model,
-            max_tokens=max_tokens,
-            temperature=temperature,
-            system=[{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}],
-            messages=[{"role": "user", "content": self._with_cache_breakpoint(user)}],
-            **extra,
-        )
-
-        return Completion(
-            text=next((b.text for b in resp.content if b.type == "text"), ""),
-            input_tokens=resp.usage.input_tokens,
-            output_tokens=resp.usage.output_tokens,
-            truncated=resp.stop_reason == "max_tokens",
-            model=model,
-            provider=self.name,
-            cache_read_tokens=getattr(resp.usage, "cache_read_input_tokens", 0) or 0,
-            cache_creation_tokens=getattr(resp.usage, "cache_creation_input_tokens", 0) or 0,
-        )
+        The correction happens once per model per process: the API tells us which
+        name it wanted, we remember it, and every later call gets it right first
+        time.
+        """
+        param = _token_param(model)
+        try:
+            return await self._get_client().chat.completions.create(
+                **kwargs, **{param: max_tokens}
+            )
+        except Exception as exc:
+            other = "max_tokens" if param == "max_completion_tokens" else "max_completion_tokens"
+            if not _UNSUPPORTED_MAX_TOKENS.search(str(exc)):
+                raise
+            _TOKEN_PARAM[model] = other
+            return await self._get_client().chat.completions.create(
+                **kwargs, **{other: max_tokens}
+            )
 
 
 def build_provider(settings: LLMSettings) -> LLMProvider:
-    if settings.provider == "anthropic":
-        return AnthropicProvider(settings)
     return OpenAIProvider(settings)

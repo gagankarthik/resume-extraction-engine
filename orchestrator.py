@@ -11,6 +11,8 @@ Stage 3 (refinement):  ValidatorAgent re-extracts jobs that came back short.
 Stage 4 (refinement):  CompletenessAuditorAgent grounds contact/client/project names
                        against the source text, measures coverage, and recovers missed
                        content additively.
+Stage 5 (pure Python): polish() applies the deterministic shape rules — degree
+                       abbreviations, nicknames, "Till Date", credentials listed once.
 
 Stages 3 and 4 improve a result that already exists. When the run is low on
 budget they are skipped and said so in the report, because a resume that is
@@ -30,6 +32,7 @@ from agents.certifications import CertificationsAgent
 from agents.deadline import Deadline, DeadlineExceeded, set_deadline
 from agents.education import EducationAgent
 from agents.personal import PersonalInfoAgent
+from agents.polish import polish
 from agents.skills import SkillsAgent
 from agents.structure import StructureAgent
 from agents.supplemental import SupplementalAgent
@@ -115,6 +118,39 @@ def _unwrap(result: Any, default: Any, agent_name: str) -> Any:
     return result
 
 
+class ExtractionProducedNothing(RuntimeError):
+    """Every section failed. The document that came back is empty, not sparse."""
+
+
+# The sections whose emptiness together means nothing was extracted at all.
+_CORE_SECTIONS = ("personal_information", "work_experience", "education", "skills")
+
+
+def _nothing_came_through(merged: dict) -> bool:
+    return not any(merged.get(section) for section in _CORE_SECTIONS)
+
+
+def _guard_against_an_empty_result(merged: dict, failures: list[Exception]) -> None:
+    """Fail loudly when the pipeline produced no resume at all.
+
+    Every stage here degrades rather than raises, which is right when one
+    section is missing and wrong when all of them are: a misconfigured model
+    name 404s on every call, and the caller was handed a clean, well-formed,
+    entirely blank resume with a 200. Silence is the worst answer this service
+    can give — a blank document looks like a parsed one, and the failure is only
+    noticed once it has been sent somewhere.
+
+    Only raised when agents actually failed. A resume genuinely containing none
+    of these sections is not an error, and must still come back.
+    """
+    if not failures or not _nothing_came_through(merged):
+        return
+    raise ExtractionProducedNothing(
+        f"No section could be extracted — all {len(failures)} agent(s) failed. "
+        f"First failure: {failures[0]}"
+    )
+
+
 class ResumeOrchestrator:
 
     def __init__(self):
@@ -196,6 +232,12 @@ class ResumeOrchestrator:
             "certifications":       cert_result   if isinstance(cert_result, list)   else [],
         }
 
+        # Nothing at all came back is a different outcome from a thin resume,
+        # and only one of them should reach the caller as a success.
+        _guard_against_an_empty_result(
+            merged, [r for r in raw_results if isinstance(r, Exception)]
+        )
+
         # Seed summary/objective from PersonalInfoAgent (guaranteed fast extraction)
         if summary_from_personal:
             merged["professional_summary"] = summary_from_personal
@@ -257,6 +299,20 @@ class ResumeOrchestrator:
             )
         except Exception as exc:
             logger.warning("[Orchestrator] Completeness audit failed: %s", exc)
+
+        # ── Stage 5: Shape ────────────────────────────────────────────────
+        # Deterministic presentation fixes over the finished result: degrees as
+        # abbreviations, nicknames out of the name, one spelling for a current
+        # role, credentials listed once. Runs last so it also covers anything
+        # the recovery pass added, and never touches the network.
+        try:
+            notes = polish(merged)
+            if notes:
+                audit = merged.setdefault("_audit", {})
+                if isinstance(audit, dict):
+                    audit.setdefault("warnings", []).extend(notes)
+        except Exception as exc:
+            logger.warning("[Orchestrator] Polish stage failed: %s", exc)
 
         # ── Attach the run report ─────────────────────────────────────────
         # Travels under a private key so it survives into _metadata without

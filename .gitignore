@@ -67,3 +67,7 @@ samples/
 
 # ── Claude Code ───────────────────────────────────────────────────────────────
 .claude/settings.local.json
+
+# Written by tools/record_fixture.py for eyeballing; the cassette is what
+# the golden test actually replays.
+tests/fixtures/*.recorded-output.json

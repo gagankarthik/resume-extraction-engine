@@ -29,7 +29,8 @@ Return ONLY this JSON:
 Rules for the name fields:
 - full_name MUST be the candidate's COMPLETE name — first, middle (if present), AND last name. The name may be split across lines, columns, or header/footer; combine all parts. NEVER drop the last name.
 - Copy the name EXACTLY as the resume writes it, character for character. Do NOT change its capitalisation — a name printed "JOHN SMITH" stays "JOHN SMITH". Keep internal punctuation (O'Brien, Smith-Jones) and suffixes (Jr., III) as written.
-- Always fill first_name and last_name from full_name (last_name = the final surname token).
+- DROP a nickname the resume prints beside the legal name in brackets or quotes. "BalaKrishna (Krishna) Jallipalli" is "BalaKrishna Jallipalli"; 'Robert "Bob" Smith' is "Robert Smith". It is the same person written twice, and repeating it reads as a mistake. Suffixes (Jr., III) and genuine multi-part surnames are NOT nicknames and stay.
+- Always fill first_name and last_name from full_name (last_name = the final surname token), with the nickname already removed.
 - Do NOT invent any value that is not present in the resume.
 - Do NOT extract or infer a headline, title, role, or designation for the candidate. That field does not exist in this schema — the recruiter supplies it separately. Job titles inside work experience are unaffected and are still extracted there.
 

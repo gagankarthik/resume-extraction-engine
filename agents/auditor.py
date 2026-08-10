@@ -26,6 +26,7 @@ from typing import Any
 
 from .base import BaseAgent, output_budget
 from .sections import heading_text
+from .skills import derive_union_fields, tidy_skill_list
 
 logger = logging.getLogger(__name__)
 
@@ -154,13 +155,25 @@ def _figures(text: str) -> set[str]:
 
 
 def source_line_index(raw_text: str) -> list[tuple[str, set[str]]]:
-    """Substantial resume lines paired with their token sets, for re-anchoring."""
+    """Substantial resume lines paired with their token sets, for re-anchoring.
+
+    Whole bullets — continuation lines folded back in — are indexed alongside
+    the individual lines. A bullet whose trailing metric wrapped onto its own
+    line has to be matchable as the one thing the candidate wrote, or the metric
+    it genuinely carries reads as invented.
+    """
     index: list[tuple[str, set[str]]] = []
-    for line in (raw_text or "").split("\n"):
-        stripped = re.sub(r"^[•●◦‣⁃∙·○▪▸\-–—*]\s*", "", line.strip()).strip()
-        toks = set(_tokens(stripped))
-        if len(toks) >= 4:
-            index.append((stripped, toks))
+    seen: set[str] = set()
+    lines = [
+        re.sub(r"^[•●◦‣⁃∙·○▪▸\-–—*]\s*", "", line.strip()).strip()
+        for line in (raw_text or "").split("\n")
+    ]
+    for chunk in [*lines, *source_bullet_blocks(raw_text)]:
+        toks = set(_tokens(chunk))
+        if len(toks) < 4 or chunk in seen:
+            continue
+        seen.add(chunk)
+        index.append((chunk, toks))
     return index
 
 
@@ -170,18 +183,23 @@ def _source_match(bullet: str, index: list[tuple[str, set[str]]]) -> str | None:
     Requires agreement in BOTH directions — most of the source line's words
     appear in the bullet, and most of the bullet's words come from that line —
     so a bullet is never swapped for a different job's text.
+
+    Ties go to the longer candidate. A wrapped bullet is indexed both as its
+    first line and as the whole bullet, and both score perfectly against a
+    faithful copy; the whole bullet is the one that accounts for all of it, and
+    picking the first line instead would read its second half as invented.
     """
     btoks = set(_tokens(bullet))
     if not btoks:
         return None
     best: str | None = None
-    best_score = 0.0
+    best_rank = (0.0, 0)
     for line, ltoks in index:
         overlap = len(ltoks & btoks)
-        score = overlap / len(ltoks)
-        if score > best_score and overlap / len(btoks) >= 0.5:
-            best, best_score = line, score
-    return best if best_score >= 0.6 else None
+        rank = (overlap / len(ltoks), len(ltoks))
+        if rank > best_rank and overlap / len(btoks) >= 0.5:
+            best, best_rank = line, rank
+    return best if best_rank[0] >= 0.6 else None
 
 
 # Clause boundaries an appended impact phrase hangs off.
@@ -212,6 +230,17 @@ def _excise_figure(bullet: str, bad: set[str]) -> str | None:
     return None
 
 
+def _nearby_figures(bullet: str, index: list[tuple[str, set[str]]]) -> set[str]:
+    """Figures written on resume lines that share real subject matter with this
+    bullet — the figures it could plausibly have been copied with."""
+    btoks = set(_tokens(bullet))
+    out: set[str] = set()
+    for line, ltoks in index:
+        if len(ltoks & btoks) >= 3:
+            out |= _figures(line)
+    return out
+
+
 def repair_figures(
     bullet: str,
     source_figures: set[str],
@@ -222,14 +251,32 @@ def repair_figures(
     Order of preference: leave it alone → restore the resume's own line →
     cut the invented clause → drop. A bullet whose figures all appear in the
     resume is returned untouched, which is the overwhelmingly common case.
+
+    Which figures count as "in the resume" is decided against the bullet's OWN
+    source line, not the document. Checking the document was the leak that let
+    padding through: the model copies a real bullet and staples "reducing
+    onboarding time 40%" onto it, and because some unrelated line elsewhere on
+    the resume happens to say 40%, the figure was accepted. A bullet is copied
+    verbatim from one place, so that place is what its numbers must match. The
+    document-wide set is still the fallback for a bullet whose source cannot be
+    located at all — there is nothing tighter to compare it against.
     """
     if not isinstance(bullet, str) or not bullet.strip():
         return bullet
-    bad = _figures(bullet) - source_figures
-    if not bad:
+    figures = _figures(bullet)
+    if not figures:
         return bullet
 
     original = _source_match(bullet, index)
+    if original is not None:
+        allowed = _figures(original)
+    else:
+        allowed = _nearby_figures(bullet, index) or source_figures
+
+    bad = figures - allowed
+    if not bad:
+        return bullet
+
     if original and not (_figures(original) & bad):
         return original
 
@@ -242,20 +289,27 @@ def _scrub_bullets(
     source_figures: set[str] | None = None,
     index: list[tuple[str, set[str]]] | None = None,
 ) -> tuple[list, int, int]:
-    """Return (kept_items, dropped_count, repaired_count) for a bullet list."""
+    """Return (kept_items, dropped_count, repaired_count) for a bullet list.
+
+    Repair runs BEFORE the fabricated-bullet test, and the test then judges the
+    repaired text. The order matters: an invented impact clause drags its whole
+    bullet out of the source's vocabulary, so a real duty with padding stapled
+    to it reads as ungrounded and used to be deleted outright — taking the
+    candidate's own sentence with it. Cutting the padding first leaves the real
+    half to be recognised for what it is.
+    """
     if not isinstance(items, list):
         return items, 0, 0
     kept: list = []
     repaired = 0
     for b in items:
-        if _bullet_is_fabricated(b, token_set):
+        fixed = b
+        if source_figures is not None and index is not None:
+            fixed = repair_figures(b, source_figures, index)
+            if fixed is None:
+                continue  # invented figure that could not be traced or cut
+        if _bullet_is_fabricated(fixed, token_set):
             continue
-        if source_figures is None or index is None:
-            kept.append(b)
-            continue
-        fixed = repair_figures(b, source_figures, index)
-        if fixed is None:
-            continue  # invented figure that could not be traced or cut
         if isinstance(b, str) and fixed != b:
             repaired += 1
         kept.append(fixed)
@@ -265,15 +319,53 @@ def _scrub_bullets(
 # ── Split-bullet repair ─────────────────────────────────────────────────────
 
 
+# A line that opens something new rather than continuing the bullet above it.
+# Without these, a resume that stops using glyphs part-way — and long ones
+# nearly all do — folds every remaining line of the document into whichever
+# bullet happened to be last, and that runaway block then replaces real
+# responsibilities with a paragraph containing another job's header.
+_SECTION_LABEL = re.compile(
+    r"^\W*(?:employer|end\s+client|client|customer|role|responsibilit\w*|project\s+description"
+    r"|area\s+of\s+work|work\s+done|important\s+(?:work|jobs|things)\s+done|period|duration"
+    r"|environment|technologies|organi[sz]ation|education|skills?|certificat\w*)\b\s*[-:–—]",
+    re.I,
+)
+
+# "Jun'07 - Jan' 09", "Aug 2013 - Jun 2015", "Nov 2015 - Present" on its own
+# line: a job header, never the tail of the bullet above it.
+_DATE_RANGE_LINE = re.compile(
+    r"^\W*(?:since\s+)?[A-Za-z]{3,9}\.?\s*['’]?\s*\d{2,4}\s*[-–—]+\s*"
+    r"(?:[A-Za-z]{3,9}\.?\s*['’]?\s*\d{2,4}|present|current|till\s*date|to\s*date)?\W*$",
+    re.I,
+)
+
+# A bullet that wraps is a fragment of one line, not a paragraph. Continuation
+# lines beyond this are new content that lost its glyph.
+_MAX_CONTINUATION_LINES = 2
+
+
+def _continues_bullet(line: str) -> bool:
+    """Does this line read as the tail of the bullet above it?"""
+    return not (
+        "|" in line                       # a table row
+        or _SECTION_LABEL.match(line)
+        or _DATE_RANGE_LINE.match(line)
+        or line.rstrip().endswith(":")    # "Responsibilities:" style heading
+    )
+
+
 def source_bullet_blocks(raw_text: str) -> list[str]:
     """The resume's bullets, each with its continuation lines folded back in.
 
-    normalize_text() has already rewritten every leading glyph to "• ", so a
-    line starting with one opens a bullet and every line after it that does not
-    belongs to that same bullet.
+    normalize_text() has already rewritten every leading glyph to "• " and
+    rejoined every lowercase wrap, so what remains to fold is the wrap that
+    starts with a capital — "Achieved 80% accuracy…" on its own line. That is a
+    line or two, which is why the folding is bounded: an unbounded run swallows
+    the rest of the resume the moment the candidate stops using glyphs.
     """
     blocks: list[str] = []
     current: str | None = None
+    folded = 0
     for line in (raw_text or "").split("\n"):
         stripped = line.strip()
         if not stripped:
@@ -283,8 +375,14 @@ def source_bullet_blocks(raw_text: str) -> list[str]:
             if current:
                 blocks.append(current)
             current = stripped.lstrip("•").strip()
+            folded = 0
         elif current is not None:
+            if folded >= _MAX_CONTINUATION_LINES or not _continues_bullet(stripped):
+                blocks.append(current)
+                current = None
+                continue
             current = f"{current} {stripped}"
+            folded += 1
     if current:
         blocks.append(current)
     return [b for b in blocks if b]
@@ -323,14 +421,28 @@ def merge_split_bullets(
         j = i
         while j + 1 < len(responsibilities) and origins[i] is not None and origins[j + 1] == origins[i]:
             j += 1
-        if j > i:
+        if j > i and _is_faithful_rejoin(responsibilities[i:j + 1], blocks[origins[i]]):
             out.append(blocks[origins[i]])
             merged += j - i
             i = j + 1
         else:
-            out.append(responsibilities[i])
-            i += 1
+            out.extend(responsibilities[i:j + 1])
+            i = j + 1
     return out, merged
+
+
+# A rejoin puts back the glue between two halves of one bullet — a space, a
+# comma, a couple of words. Anything substantially longer than the pieces it
+# replaces is not the same bullet, and swapping it in would both lose the real
+# text and import whatever else the block picked up.
+_REJOIN_SLACK = 0.25
+_REJOIN_ALLOWANCE = 20
+
+
+def _is_faithful_rejoin(parts: list, block: str) -> bool:
+    """True when `block` is the parts written as one bullet, not a paragraph."""
+    written = sum(len(_squash(p)) for p in parts if isinstance(p, str))
+    return len(_squash(block)) <= written * (1 + _REJOIN_SLACK) + _REJOIN_ALLOWANCE
 
 
 # ── Technology guard ────────────────────────────────────────────────────────
@@ -406,24 +518,54 @@ _SKILL_LIST_FIELDS = (
 )
 
 
+def _tidy_and_scrub(items: Any, src: tuple[set[str], str, str]) -> tuple[Any, int]:
+    """One skills bucket, taken apart and then grounded.
+
+    Order matters. Tidying first turns a whole resume line — "Containerization:
+    Docker, Kubernetes, Helm · IaC: Terraform" — into the skills it lists, so
+    the groundedness check judges each name on its own instead of passing the
+    line whole because most of its words appear in the resume. Prose that is not
+    a skill at all ("Work Authorization - US Permanent Resident…") is dropped by
+    the same step.
+    """
+    tidied, _, dropped_prose = tidy_skill_list(items)
+    kept, dropped_ungrounded = _scrub_techs(tidied, src)
+    return kept, dropped_prose + dropped_ungrounded
+
+
 def scrub_skills(skills: Any, src: tuple[set[str], str, str]) -> int:
-    """Drop skills not named in the resume. Returns how many were removed."""
+    """Normalise every skills bucket and drop what the resume does not name.
+
+    Returns how many entries were removed.
+    """
     if not isinstance(skills, dict):
         return 0
     dropped = 0
     for field in _SKILL_LIST_FIELDS:
-        kept, n = _scrub_techs(skills.get(field), src)
-        if n:
-            skills[field] = kept
-            dropped += n
+        original = skills.get(field)
+        if not isinstance(original, list):
+            continue
+        kept, n = _tidy_and_scrub(original, src)
+        skills[field] = kept
+        dropped += n
     for cat in skills.get("categories") or []:
         if not isinstance(cat, dict):
             continue
-        kept, n = _scrub_techs(cat.get("skills"), src)
-        if n:
-            cat["skills"] = kept
-            dropped += n
+        original = cat.get("skills")
+        if not isinstance(original, list):
+            continue
+        kept, n = _tidy_and_scrub(original, src)
+        cat["skills"] = kept
+        dropped += n
+
+    # The unions were computed from the buckets before any of this ran. Deriving
+    # them again is the only way they stay a union of what the buckets now hold.
+    derive_union_fields(skills)
     return dropped
+
+
+# An explicit department label, the only evidence that a resume states one.
+_DEPARTMENT_LABEL = re.compile(r"^[ \t]*(?:department|dept\.?)[ \t]*[:\-–—]", re.I | re.M)
 
 
 def _url_fragment(url: str) -> str:
@@ -490,11 +632,25 @@ def ground_check(merged: dict, raw_text: str) -> tuple[dict, list[str]]:
                     warnings.append(f"Removed {field} not found in resume text: {url}")
                     pi[field] = None
 
+    # A resume that never writes "Department:" has no department to extract.
+    # The field is a magnet: the model reads a client line — "Client: Department
+    # of Workforce Development" — sees the word, and files the client as the
+    # department, which then prints on the formatted resume as an org unit the
+    # candidate never named.
+    labels_a_department = bool(_DEPARTMENT_LABEL.search(raw_text or ""))
+
     # Per-job sub-projects: client/project names must exist in the source.
     for job in merged.get("work_experience") or []:
         if not isinstance(job, dict):
             continue
         company = job.get("company_name") or "?"
+
+        if job.get("department") and not labels_a_department:
+            warnings.append(
+                f"Removed department '{job['department']}' — the resume does not "
+                f"label a department for this role ({company})"
+            )
+            job["department"] = None
 
         # Drop AI-fabricated responsibilities/achievements (invented metrics or
         # ungrounded impact sentences) before any further processing.
@@ -830,14 +986,26 @@ def merge_recovered(merged: dict, recovered: dict) -> dict[str, int]:
     _append_new("projects", recovered.get("projects"), "name", "projects")
 
     # Missed skills → flat append into the skills inventory.
+    #
+    # The recovery pass returns uncovered resume LINES, so what arrives here is
+    # often a whole category row — "App Servers: WebSphere, WebLogic, Tomcat,
+    # JBoss" — or a sentence that merely sat in the skills block, like a work
+    # authorization statement. Appending those verbatim is what put paragraphs
+    # into other_skills. Taking them apart first turns the row into the four
+    # skills it names and drops the sentence.
     skills = merged.get("skills")
     if isinstance(skills, dict):
         known = set(_tokens(json.dumps(skills, ensure_ascii=False, default=str)))
-        for s in recovered.get("skills") or []:
-            if isinstance(s, str) and s.strip() and not set(_tokens(s)) <= known:
-                skills.setdefault("other_skills", []).append(s.strip())
-                skills.setdefault("all_skills_raw", []).append(s.strip())
-                added["skills"] += 1
+        recovered_skills, _, _ = tidy_skill_list(
+            [s for s in (recovered.get("skills") or []) if isinstance(s, str)]
+        )
+        for s in recovered_skills:
+            if set(_tokens(s)) <= known:
+                continue
+            skills.setdefault("other_skills", []).append(s)
+            added["skills"] += 1
+        if added["skills"]:
+            derive_union_fields(skills)
 
     # Missed summary lines → append to the summary already extracted.
     #

@@ -35,6 +35,19 @@ _QUARTER_MONTH = {"q1": 1, "q2": 4, "q3": 7, "q4": 10}
 _SEASON_MONTH = {"winter": 1, "spring": 4, "summer": 7, "fall": 10, "autumn": 10}
 
 
+def _full_year(digits: str) -> int:
+    """"2009" → 2009, "09" → 2009, "90" → 1990.
+
+    A two-digit year on a resume is in the past, so the pivot is this year: a
+    number that would land in the future belongs to the previous century.
+    """
+    year = int(digits)
+    if len(digits) == 4:
+        return year
+    century = date.today().year // 100 * 100
+    return year + century if year + century <= date.today().year else year + century - 100
+
+
 def _parse_date(s: str | None) -> date | None:
     if not s:
         return None
@@ -51,12 +64,16 @@ def _parse_date(s: str | None) -> date | None:
     m = re.search(r"(winter|spring|summer|fall|autumn)\s+(\d{4})", s, re.I)
     if m:
         return date(int(m.group(2)), _SEASON_MONTH[m.group(1).lower()], 1)
-    # Month Year  e.g. "Jan 2020"
-    m = re.search(r"([A-Za-z]+)\s+(\d{4})", s)
+    # Month Year  e.g. "Jan 2020", and the two-digit forms a long career is
+    # written in: "Feb'09", "Nov ' 01", "Oct 02". A resume that spans decades
+    # switches notation partway through, and every unparsed date used to count
+    # as zero months — which is how thirty-five years of experience was
+    # reported as sixteen.
+    m = re.search(r"([A-Za-z]{3,9})\.?\s*[-–—]?\s*['’]?\s*(\d{4}|\d{2})(?!\d)", s)
     if m:
         month = _MONTH_MAP.get(m.group(1)[:3].lower())
         if month:
-            return date(int(m.group(2)), month, 1)
+            return date(_full_year(m.group(2)), month, 1)
     # Numeric  e.g. "2020-01", "01/2020", "2020"
     m = re.search(r"(\d{4})[/-](\d{1,2})", s)
     if m:

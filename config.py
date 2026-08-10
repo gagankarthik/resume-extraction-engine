@@ -11,9 +11,6 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass, field
 from functools import lru_cache
-from typing import Literal
-
-Provider = Literal["openai", "anthropic"]
 
 
 def _int(name: str, default: int) -> int:
@@ -35,9 +32,8 @@ def _bool(name: str, default: bool) -> bool:
 
 @dataclass(frozen=True, slots=True)
 class LLMSettings:
-    provider: Provider
-    openai_model: str
-    anthropic_model: str
+    model: str
+    """The OpenAI chat model every agent calls."""
 
     max_concurrent: int
     """In-flight LLM calls across the whole pipeline.
@@ -66,10 +62,6 @@ class LLMSettings:
     truncation_escalations: int
     """How many times to re-ask with a doubled budget when a response is cut off."""
 
-    @property
-    def model(self) -> str:
-        return self.anthropic_model if self.provider == "anthropic" else self.openai_model
-
 
 @dataclass(frozen=True, slots=True)
 class Settings:
@@ -94,18 +86,10 @@ def get_settings() -> Settings:
     module never fails at import time on a bad value — the error surfaces on
     first use, where it can be reported properly.
     """
-    provider_raw = os.getenv("MODEL_PROVIDER", "openai").strip().lower()
-    if provider_raw not in ("openai", "anthropic"):
-        raise ValueError(
-            f"MODEL_PROVIDER must be 'openai' or 'anthropic', got {provider_raw!r}"
-        )
-
     origins = os.getenv("CORS_ORIGINS", "http://localhost:3000")
     return Settings(
         llm=LLMSettings(
-            provider=provider_raw,  # type: ignore[arg-type]
-            openai_model=os.getenv("OPENAI_MODEL", "gpt-4.1-mini"),
-            anthropic_model=os.getenv("ANTHROPIC_MODEL", "claude-opus-4-7"),
+            model=os.getenv("OPENAI_MODEL", "gpt-4.1-mini"),
             max_concurrent=_int("LLM_MAX_CONCURRENT", 12),
             max_output_tokens=_int("LLM_MAX_OUTPUT_TOKENS", 32000),
             call_timeout_seconds=_int("LLM_CALL_TIMEOUT_SECONDS", 90),

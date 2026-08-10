@@ -43,6 +43,24 @@ logger = logging.getLogger(__name__)
 # a moment, it fails as one section rather than as the whole extraction.
 _MIN_RETRY_SECONDS = 8.0
 
+
+def _describe(exc: BaseException | None) -> str:
+    """An exception rendered so a log line says what went wrong.
+
+    asyncio.TimeoutError carries no message, so the usual "{exc}" put an empty
+    pair of brackets in the log: "[Skills] attempt 1 failed () — no budget left
+    to retry". The most common failure on a long resume was the one the logs
+    described least, and a timeout that does not name itself reads as a bug in
+    the parser rather than a call that needed more time than it had.
+    """
+    if exc is None:
+        return "unknown error"
+    text = str(exc).strip()
+    if isinstance(exc, (asyncio.TimeoutError, TimeoutError)):
+        return f"timed out ({type(exc).__name__})"
+    return text or type(exc).__name__
+
+
 # A re-ask after a truncated response regenerates the whole section from
 # scratch, so it needs the most room of all.
 _MIN_ESCALATION_SECONDS = 25.0
@@ -194,17 +212,18 @@ class LLMClient:
                 elapsed = time.monotonic() - started
                 if not deadline.allows(wait + max(_MIN_RETRY_SECONDS, elapsed)):
                     logger.warning(
-                        "[%s] attempt %d failed (%s) — no budget left to retry", label, attempt + 1, exc
+                        "[%s] attempt %d failed (%s) — no budget left to retry",
+                        label, attempt + 1, _describe(exc),
                     )
                     break
 
                 logger.warning(
                     "[%s] attempt %d/%d failed (%s) — retrying in %.2fs",
-                    label, attempt + 1, self.settings.transport_retries + 1, exc, wait,
+                    label, attempt + 1, self.settings.transport_retries + 1, _describe(exc), wait,
                 )
                 await asyncio.sleep(wait)
 
-        raise ExtractionFailed(f"[{label}] every attempt failed: {last_exc}") from last_exc
+        raise ExtractionFailed(f"[{label}] every attempt failed: {_describe(last_exc)}") from last_exc
 
     # ── One call, parsed, with truncation handling ────────────────────────
 

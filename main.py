@@ -76,10 +76,8 @@ async def root():
         "belongs_to": "Resume State Format Tool",
         "description": "Resume extraction for the Resume State Format Tool — not a general-purpose endpoint.",
         "version": "2.0.0",
-        "provider": os.getenv("MODEL_PROVIDER", "openai"),
-        "model": os.getenv("OPENAI_MODEL", "gpt-4.1-mini")
-                 if os.getenv("MODEL_PROVIDER", "openai") == "openai"
-                 else os.getenv("ANTHROPIC_MODEL", "claude-opus-4-8"),
+        "provider": "openai",
+        "model": os.getenv("OPENAI_MODEL", "gpt-4.1-mini"),
         "supported_formats":  filetypes.SUPPORTED_DISPLAY,
         "max_file_size_mb": MAX_FILE_MB,
         "endpoints": {

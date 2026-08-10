@@ -1,0 +1,397 @@
+Anil K Verma
+Lewis Center, OH anil.verma@example.com
+Cell - 555 0100 7788
+I am a SAP Consultant with more than 3 decades of total experience, with 24 (since 2002) years of SAP consulting experience in Supply Chain area. Before SAP Consulting, I worked for 11 (1990 - 2001) years in manufacturing / shop floor, with last assignment as a Plant General Manager for a manufacturing unit, that helps me understand the business process to transform the business into SAP.
+
+Apart from configuration, writing FSPECs, testing, client meeting for UAT sign off, I have extensive experience with conducting workshops, training, developing BPP documents, defect management, project management and coordination across teams for meeting the deliverable timelines.
+Skill sets in SAP -
+• Procure to Pay (PTP), Inventory Management
+• Plan to produce (PTM PP, PP-PI)
+• FI - Invoice Processing (Accounts Payable PTP and Receivable OTC)
+• QM
+• Central Functions
+• Data Conversion and Interfaces (Designed over 100s of Interfaces, Data Conversion and Report Objects) in different projects. Master Data (Material / Vendor/ Customer), Batch Management, Integration between PP-Costing, MM-FI, and SD-FI, Engineering Change Management, RICEF Objects
+• Master Data Management/Data Conversion - Master and Transactional data end to end design and execution, using Data Services, BackOffice, Cransoft, Informatica and MDM tools like Siperian, NIA and Customized web-based tool.
+Objects - FI (Open Invoices), MM (Vendor, Open PO), IM (Inventory) PP (Work Center/ Resources/BOM/Routing/ Recipe/Open Production Orders), SD (Customer), QM (Parameters).
+• Interfaces end to end design and execution for interfaces related to FI, PP, MM, QM, and Inventory /WH Management, SAP ME/MII, SAP - SNC, SAP - APO using HANA, ETL, web Methods, TIBCO and SAP XI/PI and EDI.
+.
+SAP Project Experience
+• Project Management / Solution Architect / Consulting / Lead experience with companies like IBM, Siemen, WIPRO, Limited Brands, HCL Americas, American Business Solutions and clients like Cardinal Health, Boeing, Johnson and Johnson (NJ, USA), Merck (NJ, USA), Sanofi Aventis, JackLinks, Owens Corning, Mylan Labs Southwire, Baltimore Aircoil, Crown Equipment, Ericsson Telecommunications (Sweden), ISPAT Steels, Tetrapak in USA, Europe and Asia.
+• Experience in Configuration, Development (Functional Design/Specification), MDM/Data Conversion, Interface, testing in implementation / roll out / hyper care and support projects.
+• Business / Manufacturing Experience
+Managerial Experience in Manufacturing Industry - Shop Floor Production / Process Planning / Inventory Management/ Environment Management/ QM experience in. Worked in regulated environment, including FDA, cGxP, HACCP, ISO 9000
+• Compliance and FDA related - SAP - Worked in regulated environment at J and J, Merck, Sanofi, Cardinal Health, Mylan Labs All these projects included QA and compliance including Process Audit, Test and documentation, Batch Management / Batch Genealogy. Worked in FDA regulated environment in Pharma Manufacturing.
+• Supporting tools - Solution Manager, HPQC Test Manager
+• Management - Managed day-to-day client relationships and team.
+• SAP Training and Courses: SAP S/4 HANA Simple Logistics, SAP PP, SAP MM, SAP PM, SAP APO (DP/SNP), SAP FI /CO
+SAP Projects
+Duration | Client | Role / Area of work
+Jun 2025 - March 2026 | An Aircraft part manufacturer | Project Management / Architect S/4 HANA (PTP / PTM / QM/ OTC / PPDS/ FICO modules and SAP SAC)
+Dec 2023 - May 2025 | Boeing | SAP Solution Architect / Project Management SAP S/4 HANA / ECC for OTC / PTP/ MRO
+Sep 2023 - Dec 2023 | DRIV (Formerly Federal Mogul) A car Parts Manufacturer | SAP Supply Chain Architect / Team Lead overseeing PTP / PTM / MRP design in sap S/4 HANA integration with WM / PM, MES and Weighing Scales
+Dec 2022 - Aug 2023 | Cardinal Health | SAP - Senior Consultant, working on design discussion, design and coordination with other partners / SIs to configure and writing FSPEC for a Finance Transformation Project
+March 2022 -Nov 2022 | Baltimore Aircoil | SAP PP (VC) Consultant S/4 HANA - Designed the solution for Shop Floor Production including configuration and enhancement design, integration with VC, PPDS
+Oct 2021 - March 2022 | Southwire | SAP Consultant PTP / PTM (VC) - Design and Support for acquisition of new business. Roll out of Global Template with Localization
+Conversion, Field definition and mapping, Interface,
+July 2019 - Sep 2021 | Cardinal Health | Sr SAP (Functional Lead) Consultant PTP / OTC / FI Reporting - OTC / Accounts Receivable
+integrating Order Express / SAP / HANA / DATASTAGE / TERADATA / Vistex and Legacy Systems across business process
+Apr 2019 - July 2019 | Weir Minerals | Lead SAP MM/PP/QM Consultant integration with SD / PM /WM. Roll out of Global Template with Localization
+Sep 2017 - March 2019 | Cardinal Health | Lead SAP PTP-FI integration - for a Finance Transformation Project - Integrating ERP System BPCS with SAP. Designed integration for AP Invoice and Payment Process for 17 Manufacturing Plants across globe.
+June 2017 - Sep 2017 | S C Johnson | Lead Supply chain PP / QM Consultant (S/4 HANA) and integration with Sales / Procurement /WM for new acquisition.
+Aug 2016 - Jun 2017 | Cardinal Health | SAP Consultant PTP, (S/4 HANA) - Lead design for Vendor, Open PO, Inventory and Open AP Invoices load, Invoice Interface using EDI
+Nov 2015 - Aug 2016 | TTX Rail | SAP Consultant for MRP - Design for Optimization of Inventory, Inventory Reporting, MRP for stock availability and STO
+June 2015 - Nov 2015 | Crown Equipment | SAP PP Consultant - design, data load for Open Production Orders, Integration with Inventory Management, Costing, and integration with SD / MM /WM / PM.
+Developing Global Template for Roll outs for different Plants
+Aug 2013 - June 2015 | Jacklinks | SAP Logistics Lead Consultant - PP, MM, QM WM
+Conversion, Field definition and mapping, Interface, Enhancement and Configuration for Roll Outs and Enhancement
+Nov 2012 - Jun 2013 | Sanofi Aventis | Solution Architect - SAP MM/PP / QM /LIMS Integration and design for Global reporting dashboard
+Sep 2012 - Nov 2012 | Global Specialty Metals | SAP PP, MM and QM and integration with Sales / Procurement /WM
+May 2012 - Sep 2012 | Mylan Labs | SAP Consultant PP / QM - Design interface with Mettler Lab system
+Feb 2012 - May 2012 | Owens Corning | SAP PP Consultant
+Nov 2010 - Feb 2012 | Cardinal Health | SAP Consultant MM - Procure to Pay - Responsible for data load for Inventory and Sales History data, for MBT
+Feb 2009 - Nov 2010 | Johnson and Johnson | SAP Integration Architect - Lead design for Integrating SAP with 65 + Interfaces and 24 Data Conversion Objects across Supply Chain and Finance Modules
+Jun 2007- Jan 2009 | Limited Brands IS Retail | Application Consultant (MDM, Article Master, MM, Interfaces)
+Apr 2006 - Jun 2007 | Merck Pharma | SAP Consultant / Global Template for Material Master and Manufacturing Data.
+Apr 2005 - Mar 2006 | Johnson and Johnson | SAP Consultant - (MM / Procure to Pay)
+Jan 2004 - Mar 2005 | Ericsson | SAP Consultant (PP/MM/VC)
+Aug 2003 - Dec 2003 | Tetrapak | SAP PP / VC Consultant
+Apr 2003 - Jun 2003 | Torrent Pharma | SAP PP Consultant
+Oct 2002 - Apr 2003 | Ispat Industries | SAP PP / VC Consultant
+Since June 2025 -
+SAP Project Manager
+An Aircraft part manufacturer
+SAP Project Management / Solution Architect for S/4 HANA implementation, responsible for Design review / approval, delivery, testing, UAT approval, escalation, Change review deployment and coordination among teams and stakeholders for deliverables.
+Dec 2023 - May 2025
+Boeing
+SAP Solution Architect / Project Management for roll outs
+Responsibilities
+Solution design for Global Services projects in a complex landscape including SAP and multiple interfaces with multiple other SAP and non-SAP systems including for Planning and Supply Chain
+SAP Functionality included PTM, PTP, WM, OTC, FTP (SAP APO/ SPM), FICO / PM / MRO
+Project Management / Leading the team of Consultants, Boeing IT and Business to ensure accurate and acceptable design
+Estimation, Budgeting and budget approval for estimates
+Techno Functional Architecture
+Coordination
+Project deliverables
+Regular and periodic reporting for PMO and Clients
+Sep 2023 - Dec 2023
+DRIV (Formerly known as Federal Mogul) / Tenneco (An Automobile part company)
+Architect for Supply Chain for MM / PP / Planning and integration with complex WM scenario for their greenfield project. Responsible for the techno functional architecture / coordination and deliverable
+Dec 2022 - Aug 2023
+Cardinal Health
+SAP MM Consultant for FI integration
+Coordinating with other partner system integrators for design discussion/ blueprint.
+Configuration and writing FSPEC
+March 2022 - Nov 2022
+Baltimore Aircoil
+SAP PP Lead Consultant S4 HANA
+Designed PP solutions, including Configuration, RICEF design ownership and integration with VC & PPDS.
+SAP PP (VC) Consultant S/4 HANA - Designed the solution for Shop Floor Production including configuration and enhancement design, integration with VC, PPDS
+Oct 2021 - March 2022
+Southwire
+SAP MM / PP Consultant
+Bringing new acquired plants to its landscape of SAP of the parent company.
+Responsible for designing / support for rolling SAP solution for PP and MM modules using PP / VC and integration with CPQ
+Supported 2 Go Lives in FL and CA
+July 2019 - Sep 2021
+Cardinal Health
+Sr SAP Functional Lead
+Responsible for designing, writing FSPEC, testing and UAT approval of GPO reporting in a very complex landscape in SAP functional areas PTP /OTC /FICO IR / AR with data source being multiple legacy systems, SAP ECC, Order Express, HANA suit, Teradata / ETL
+Apr 2019 - July 2019
+Weir Minerals
+Sr SAP Consultant MM/PP/QM
+Designing SAP MM / PP solution across plants in USA and integrating SAP with tools for Production Scheduling and Shop Floor Control / QM design / Integration QM with MES and integration with Sales / Planning / MRP Procurement /WM
+Worked for Go live for one plant (Global Template)
+Sep 2017 - March 2019
+Cardinal Health
+SAP MM Lead Consultant
+Area of work SAP MM - FI Integration - Integration Lead for Newly Acquired Plants. This includes bringing the business of the acquired company into the landscape of Cardinal Health on SAP Systems
+Designed AP Invoice Interface and Recon reporting for 17 acquired plants of Medtronic into Cardinal SAP (S/4 and ECC systems) for payment to be processed in SAP System
+June 2017 - Sep 2017
+S C Johnson
+SAP Consultant PP /QM
+Designed SAP Solution for PP and QM for newly acquired business in Europe. Designed conversion of Master Data (Material Master, BOM, Recipe), configuration of Order Management, MRP, Shop Floor Control, Functional design for RICEF, QM Set up for raw material and finished goods, Master Inspection Plan, Inspection Lot and integration with Sales / Procurement / WM,
+New acquisition and part of design of Global Template.
+Aug 2016 - May 2017
+Cardinal Health
+SAP P2P Consultant
+Area of work
+Procurement, Goods Movement, Inventory and AP Unmatched and Matched Invoices
+Data conversion - Design and issue handling for conversion of Data from Legacy systems including CMS and JDE, Report generation and sign off (Coordination with different stake holders for design, development and sign off).
+EDI and other Interfaces for Invoice
+Report design for BI and A
+Part of Brokerage and BackOffice Go Live and fixing of issues - Hyper Care
+Nov 2015 - Aug 2016
+TTX Rail Car
+SAP MRP Consultant
+Responsible for Business Requirement, Blueprint, Configuration, Functional Design and Testing MRP Rollout
+Designed MRP to optimize inventory, enable Internal STO and External PO, for Field Operation and rolled out in 20 Plants
+Set up Jobs for Forecast and MRP
+Knowledge Transfer to Client
+Jun 2015 - Nov 2015
+Crown Equipment
+SAP PP Consultant
+SAP PP Consultant, overseeing the Manufacturing Execution and Integration with MM / WM SAP ME/MII, and integration with Sales / Procurement /WM
+Configuration and Customization in PP / Shop Floor Execution
+Production Order Management, Planned Order, Production Order Create Release and Confirmation, Print, Goods Receipt and Goods Issue, TECO, Batch Jobs
+Data Conversion design for Open Production Orders
+Rework Order
+Material Staging and Goods Movement
+Integration with MM/WM/QM and CO
+External Process Purchase Order and Sub Contracting Purchase Order
+Batch Job set up for Order Create, Release, Confirmation and TECO
+Functional Testing for Enhancement and Print Customization
+Supported Go Live Hyper care
+The project developed a Global Template and will be used for roll outs to other Plants
+Aug 2013 -Jun 2015.
+Jacklinks, MN
+Lead Supply Chain Consultant for SAP PP /MM/QM/WM
+Responsible for Roll Outs, Enhancement and Support
+The client is one of the Global Leader in Food Sector
+Work done
+PP
+Configuration, Functional Design for Interfaces, IDOC enhancement, Labels, Testing, Roll Outs and Hyper Care, RF Design (Configuration) for Materials Movement, Production Planning, Shop Floor Execution (Order Management), MRP, Goods Movement, Interfaces, IDOC, Label Print, Customized Reports for life cycle
+Demand Management, S&OP, Flexible Planning, Transfer of Demand, Planned Independent and Dependent requirement, Production Scheduling, Make to stock
+Writing Functional Spec for Enhancement and Interfaces.
+Batch Job for Order Create, Release, Confirm, TECO
+Batch Job for MRP Run
+QM
+Quality management set up for Purchased and finished goods. Configuration and design for Quality Inspection, Inspection Lot, Inspection Stock, Usage decision
+MM
+This was a Roll Out within USA and Europe, and Support for the Plants already went live
+Roll out - New Plants
+Design of Enterprise Structure
+Designed Purchase Order for Components and Raw Materials from External Vendor
+Designed Stock Transfer Order for Semi Finished Goods between Plants and Storage Locations.
+Set up Master Data, Vendor Master, Infor Records
+Designed Output Determination, and customized forms for Purchase Documents
+Designed RF Scan and Labels upon Goods Receipt
+Designed Batch Derivation to copy the actual date of Manufacturing and shelf life from Raw Material to next level.
+Nov 2012 - Jun 2013
+Client - Sanofi Aventis
+Role - Solution Architect for SAP Process Data Warehouse for MM/ PP /, QM
+Area of work SAP Supply Chain Manufacturing PP and Quality Management includes applications like SAP ECC, LIMS. MES, Shop Floor Data.
+The QM work includes Finished Product Analysis, Inspection Lot, Usage Decision, Interface with LIMS
+Designing a Process Management Solution with Transactional data from SAP, LIMS, MES etc, with heavy data exchange between these systems. The transactions include the entire cycle for Manufacturing Execution and Quality Cycle.
+Responsibilities -
+Requirement Gathering, Workshops
+Functional Specification
+Configuration and Coordination with development team in ABAP, MES, LIMS. MII and TIBCO
+Test execution and client approval
+Sep 2012 - Nov 2012
+Global Specialty Metals, Marietta, OH
+
+SAP PP/MM/QM
+Role - Consulting Supply Chain MM/ PP / QM, end to end design and support. Supported Go live and hyper care.
+
+PP -
+Order Management, Functional Design for Interfaces, IDOC enhancement, Labels, Testing, Roll Outs and Hyper Care, Shop Floor Execution
+Testing Functional Spec for Enhancement and Interfaces
+MM - Purchase Scenarios, Including Direct Vendor and Inter Plant STO
+QM - QM for Purchased and Finished Goods
+Client - Mylan Pharmaceuticals, Morgantown, WV (HO Pittsburgh, PA)
+May 2012 - Sep 2012
+Role - Consulting Supply Chain MM, PP and QM
+Designed the PP and QM Solution and PI Sheet for the Manufacturing Process, MES and Raw Material Purchase for Roll Out, as the organization implemented MDM
+May 2012 - Sep 2012
+Mylan Labs
+
+SAP PP QM
+Worked for a project for generating PI sheet and integration with Weighing scale to get data related to active ingredients
+Design, FSPEC, testing UAT and deployment
+Feb 2012 - May 2012
+Owens Corning, Toledo, Ohio
+Role - PP Consultant, responsible for deliverable in PP area, including, Client Interaction, Configuration, Data Conversion, (Material Master, BOM, Recipe), Interface Design, Enhancement, Coordination with APO, CRM and other ECC team, testing
+Area of work - Master Data, MR Planning/ Demand Management, S&OP, Flexible Planning, Transfer of Demand, Planned Independent and Dependent requirement, Production Scheduling, Capacity Evaluation
+, Shop Floor Execution, Order Management, Process Management
+Also worked on PM Master Data
+Nov - 2010 - Feb 2012
+Cardinal Health, Dublin, Ohio
+SAP Consultant MM (PTP)
+End to end design for Data Conversion and Interface Material Master, QM Data, Inventory/WM, Demand
+Planning, Sales Order History for forecast Sales Request Data from Legacy and subsequent downstream system. The Data Conversion consisted of setting up rules for MDM, and Data
+Governance for Material Master
+Responsibilities - Responsible for gathering business requirement, Functional Specification, Mapping, Interaction with ETL and ABAP team to design conversion including MDM, Data Governance, conversion rules, staging, conversion, testing, SAP Configuration for successful conversion without error. and sign off. Successfully designed conversion for Material, Planning, Inventory/WM, Sales Order History for Demand Planning data going to ECC, BW and APO.
+Designed Validation rules to make sure the data quality was good.
+For Inventory conversion dealt with stocked managed with Serial Numbers (serialized).
+Feb'09 - Nov' 10.
+Johnson and Johnson at NJ, USA
+SAP Integration Lead MM/PP/Interfaces/Integration/MDM
+The project consisted of implementation of PP, QM, MM, IM and FICO modules. Huge scope of number of sources for initial data load and a number of legacy system related to PP. PP, MM, IM, QM and FI/CO. As a lead for interfaces one of the main responsibilities was to audit the flow of data and data quality.
+Responsibilities -
+Responsible for Configuration/ Enhancement / Interfaces Process in areas of MM (P2P) / PP/ Inventory/WM, Quality Management, Planning,
+Master Data Management for Material Master and setting up rules for Data Governance for data maintenance and interface between MDM and SAP ECC. Responsible for Configuration/ Enhancement / Interfaces Process in areas of MM (P2P)/ PP, Inventory/WM, Quality Management, Planning,
+Work done
+Master / Transactional Data design - for Manufacture and Planning/Production Planning, Production Orders/Process Order, Batch Master, Inventory including Material Master Maintenance and Classification.
+Interfaces with legacy systems and other SAP systems, instances - which have end to end business process, using middleware webMethods, SAP XI (PI), EDI, with Legacy systems and also SAP ECC- SAP SNC, SAP APO,
+Important Legacy to be interfaced with SAP - Labpas, PLC, LIMS, WMS, MES, SAP FI system instance, SNC. Designed more than 65 Interfaces in this project for exchange of day to day data and Master Data including Material, Vendor and Finance Master Data.
+Data extraction for reporting.
+Production Planning -Demand Management, Independent and Dependent requirement, Shop Floor Execution, Production and Process Order, Data Conversion for Open Production/Process Order, Work Center/Resources, Routing/Recipe, KANBAN processing for Production Order, Control Instructions, Process Management, Process Management/ instruction using X Steps (including X Steps Parameters, Process Instruction Electronic Batch Record to generate all the process and quality history, signature strategy, Batch Management Cockpit and Interface to MES and Electronic Work Instruction.
+Procurement - Vendor Master, Purchase Order, Goods Receipt, Invoice, AP
+Quality Management - Master Inspection Plan, Inspection Lot, Results, Non Conformance.
+Batch Management. Batch Derivation
+Important work done -
+Managed and Lead team meetings for Business Requirement
+Managed and Lead meeting for functional and technical design
+Approved functional Specifications related to PP, QM, Inventory Management Process and coordinated with web Method team for the interface design.
+Data Conversion - Resolved issues related to data load for Objects related to these areas.
+Integration Testing - End to end integration testing for PP, MM
+KANBAAN - Master Data and Configuration, RF based WM goods issue and triggering Order (Make or buy)..
+Unit test and End to end test scenario in PP/PP and MM/IM.WM
+Documentation / BPP
+Jun'07 - Jan' 09
+Limited Brands, (Victoria's Secret / Bath and Body Works)
+Application Consultant, Master Data
+Implementation and enhancement/ Support of SAP ECC 5.0
+Important work done
+Master Data Management / Data Governance/ Data Conversion/ PLM - Article (Material), Vendor, PIR,
+Open PO, Inventory
+MDM Tool for Article Master - the tool is designed to create Article Master - Retail) involving
+Staging, jobs and workflow. The tool is a front end tool, which is integrated with SAP, and creates Article,
+Generic and Variants, followed by Listing to DCs, creation of PIR, CAIR, Royalty Conditions, This tool
+Ensures the data quality and approval.
+Archiving - Design for archiving and deleting obsolete data.
+Data Governance - Designed programs to monitor Data quality e mail messages.
+Data Modeling
+Responsible for Solution Delivery Competency, for resolving issues related to SAP System, and related
+Legacy system.
+To document, test, and implement any enhancement required
+Customized and configured the SAP System as per the business requirement. (New requirement and modification to the existing set up)
+To oversee the jobs which exchanges data between different systems, Optiva, Flex PLM, SAP, and other legacy system, and resolve issues.
+Article fields - Definition of important field including UOM, Product Hierarchy, Material Group, EAN, / GTIN, Serial Number Profile for Serialization.
+Employer - IBM Global Services - Jun'03 - Jun'07
+Apr'06 - Jun' 07
+Client : Merck, NJ, USA
+Sr. Consultant - Matériel Master / SAP PP
+Area of work -
+SAP Material Master - Global Template and process design for Material Master Data governance.
+PP / Global Design and template for Material Master, PP//MM/PM Master and Transactional Data BOM, Resource, Recipe, Equipment, Functional Location, MRO Materials, Vendor, PIR, Production Process Master Data, Confirmation Parameter, ECM, Document Management, Classification, Cross functional integration. Process design and configuration,
+Master Data, MR Planning/ Demand Management, S&OP, Flexible Planning, Transfer of Demand, Planned Independent and Dependent requirement, Production Scheduling, Capacity Evaluation
+, Shop Floor Execution, Order Management, Capacity Leveling,
+Batch Management, Strategy for Sales, Inventory and Process Orders, Batch Traceability, Batch Derivation. Electronic Batch Record and signature strategy.
+Responsibilities:
+• Requirement gathering and GAP analysis
+• Configuration of Process Order Management
+• Leading the Design - Configuration and owning FS for gaps
+• Data Conversion and design for Material Master, BOM, Resource, Recipe
+• Design and build of Batch Management
+• Unit test and Integration test, UAT, Training and sign off
+• Interface Design
+• Coordination with the Development team
+Important jobs done -
+Project Coordination
+• Designed MDM approach, data governance and data modeling for Material Master and Manufacturing Master Data.
+• Organized Global workshops and gathered User Requirements,
+• Organized workshops with core team members across different functions, to explain the fields and decide the ownership.
+• Integration meeting and co ordination
+Configuration
+• Master Data
+• Shop Floor Execution and Order Management
+• PP - Master Data, Resource, Master Recipe
+• Process Management / PI Sheet - Characteristics Group, Characteristics, User Exit, Process Instruction - Characteristics Group, Characteristics, PI Category
+• Material Master, including new screens for custom fields, Setting for Key fields, EAN, Product Hierarchy, Serial Number Profile (Serialization)
+• Batch Management, Batch Search Strategy, Batch Derivation.
+• Electronic Batch Record (EBR), Signature Strategy
+
+RICEF -
+• Enhancement of Material Master screen
+• Functional specification for Data Mapping for Material Master, BOM, Resource, Recipe, ECM.
+• Functional Specification for Updating Material Master from Legacy System
+• Functional Specs for Batch Management, Material Master Workflow, Interface with legacy systems, Custom Views and Fields in Material Master
+• Defined conversion rules for Material Master upload from legacy system. (Data Conversion Specification) and Coordination with Back office Associates for Data Conversion.
+• PI Sheets
+• Workflow design for Material Master Creation.
+• Documented Configuration, Functional Requirement Specifications, Data Migration Requirement, Functional Specification in Solution Manager.
+• Change and Document Management, activation of Revision Level
+• Data Conversion and Mapping (Cransoft)
+Defined conversion rules for BOM, Recipe, Resources (Data Conversion Specification) and Coordination with Back office Associates for Data Conversion
+Employer - IBM Global Services - Jun'03 - Jun'07
+Apr'05 - Mar'06
+Client: Johnson & Johnson, NJ, USA
+Project Description: Global Support and Enhancement
+Sr. Consultant SAP Material Management
+Responsibilities:
+• Global Support and Enhancement for Procure to pay
+• Adding new functionality
+• Functional Spec for Enhancement
+Important work done
+• Supported - MM P2P- Purchase Requisition (Material & Service), PO, GR, Invoice Receipt, Invoice Discrepancy, Release Strategy, Workflow
+• Supported - HR- Master Data, Time Reporting, Assignment of Activity, BW - HR and Finance Reports
+• Functional Specs for new requirements, testing, sign off, and user acceptance test
+• User Acceptance test and training
+• Vendor Master maintenance
+Employer - IBM Global Services - Jun'03 - Jun'07
+Jan'04- Mar'05
+Client: Ericsson, Stockholm, Sweden
+Project Description: Global Support, Implementation and Enhancement
+Sr. Consultant - Production Planning, Materials Management, Variant Configuration
+Ericsson is the Global Leader in Providing Telecom Services. It has local as well as Global SAP Solutions. I worked as SAP Sr. Consultant PP/MM, VC, and integration with SD for Enhancement, Global Roll outs and Production Support.
+Responsibilities:
+Sr. Consultant Logistics responsible for MDM, Variant Configuration, PP/VC, and MM/VC for Variants and Team Coordinator
+Business Process analysis, Analysis of functionality and generating development requirement
+Configuration
+Functional Specification, Testing, UAT, Sign off for Enhancement Release Cycle
+Global Support for the part already implemented
+Important work done
+As part of MDM team designed the data for Variant Configuration and interface with ECC.
+BOM and using Object dependencies
+Enhancement of the program for transaction codes related to VC data transfer and BOM between two logical systems.
+Functional design and Specification.
+Testing of the Enhancement.
+Production Planning, Shop Floor Control
+Employer - IBM Global Services - Jun'03 - Jun'07
+Client: Tetra Pak, Sweden
+Project Description: Up gradE From Version 4.5 to 4.7
+Sr. Consultant for Logistics (PP, MM, SD, QM), PS and VC.
+Period: Aug'03 - Dec'03
+Responsibilities:
+Configuration and release
+Validation of Configuration (Unit test and Integrity test)
+Analyzed the new business requirement, Customized as the design
+Coordinated with other team members for testing
+Releasing the changes
+Employer - Siemens Information Systems Ltd. Apr' 03 - Jun' 03
+Torrent Pharma Ltd., India
+Apr 03 - Jun 03
+SAP PP Consultant
+Responsibilities:
+Analyzed Business Process
+Involved in Configuration and creation of Material, Resource, Master Recipe, BOM
+Configured different Inspection Types for Raw Material, In process and finished product.
+Shelf life, Discontinued material
+Worked on Master Inspection Characteristics, Demand Management, Planned Independent Requirement, MRP, Availability Check
+Order Management - Worked on Process Order, Creation, Release and Confirmation
+Involved in Integration Testing with SD, MM, CO, QM
+Employer - CVS IT Services Oct' 02 - Apr' 03
+Ispat Industries Ltd., India
+SAP Consultant PP and VC
+Oct 02 - Apr 03
+Responsibilities:
+Business Process Analysis
+As is and to be analysis
+Customized and Configured as per the requirement
+Jobs one in the area of
+Material Requirement Planning, Order Management, Shop Floor Control, Process Management, Batch Management, Class and Characteristics
+PP Master Data Resource/Mater Recipe
+Process Order - Order Management Order Type, Order Type Dependant Parameters, Recipe, BOM, Operations, Task List Selection, BOM Selection, Availability Check, Batch Determination, Scheduling, Confirmation
+Process Management/ PI Sheet - Characteristics Group, Characteristics, User Exit, Process Instruction - Characteristics Group, Characteristics, PI Category
+Extensively worked on Master data creation (Material, Bill of Material, Resource, Master Recipe)
+Worked on Demand Management especially in the area of transfer of requirements, Planned Independent Requirement, MRP, and Availability Check.
+Integration Testing with SD, MM, CO, QM
+Interaction Core Users and Training to end users
+Classification data for VC
+Nov '01 - Sep' 02
+Training/ Development /Self employed
+Responsibilities:
+• Analysis of Business Process and suggesting the client for best Manufacturing Practices
+• Analysis of ERP requirements
+Manufacturing Experience:
+Organization | Environment | Role | Location | Duration
+C.J.Gelatin Products Ltd. | Manufacturing Co. Pharma and Food Grade Chemical | General Manager for Production and Quality Control | Bhopal, India | Feb' 01 - Oct' 01
+Rama Industries Ltd. | Manufacturing Co. Pharma and Food Grade Chemical | Head of Technical Services and Dy. Manager. | Patiala, India | Feb' 99 - Feb' 01
+Shaw Wallace Gelatines Ltd. | Manufacturing Co. Food, Pharma Grade Chemical and Beverage | Sr. Executive Production and Process Control | Jabalpur, India | Feb' 90 - Feb' 99
+Other relevant
+• Qualified to become Assistant Professor in Chemistry/ Organic Chemistry
+• Certificates in TQM and ISO 9000 Quality System
+Education -
+• Masters in Chemistry Rani Dugravati University, Jabalpur MP 1989
+• MBA - IGNOU - Delhi 1999

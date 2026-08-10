@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
 import time
 
 import pytest
@@ -27,6 +28,7 @@ from agents.deadline import Deadline, DeadlineExceeded
 from agents.llm.client import LLMClient
 from agents.llm.providers import Completion
 from config import LLMSettings
+from orchestrator import ExtractionProducedNothing
 
 # One call's simulated latency. Large enough that serialised calls are
 # unmistakable in the total, small enough to keep the suite quick.
@@ -75,7 +77,7 @@ class FakeProvider:
         finally:
             self.in_flight -= 1
         return Completion(
-            text=json.dumps(self._answer(system)),
+            text=json.dumps(self._answer(system, user)),
             input_tokens=100,
             output_tokens=100,
             truncated=False,
@@ -84,8 +86,15 @@ class FakeProvider:
         )
 
     @staticmethod
-    def _answer(system: str) -> dict:
-        """Shaped like the agent's expected response."""
+    def _answer(system: str, user: str) -> dict:
+        """Shaped like the agent's expected response.
+
+        The work answer is derived from the job the caller asked about, not
+        fixed. A fake that names every job "Company 0" is not merely unrealistic
+        — twelve identical roles are twelve copies of one role, and the shape
+        pass now (correctly) collapses them, so the fake would be asserting that
+        de-duplication is broken.
+        """
         if "structure analyzer" in system:
             return {
                 "jobs": [
@@ -102,11 +111,13 @@ class FakeProvider:
                 ]
             }
         if "work experience extraction specialist" in system:
+            match = re.search(r"Extract work experience for:\s*Company (\d+)", user)
+            i = int(match.group(1)) if match else 0
             return {
-                "company_name": "Company 0",
+                "company_name": f"Company {i}",
                 "job_title": "Senior Engineer",
-                "start_date": "Jan 2010",
-                "end_date": "Dec 2011",
+                "start_date": f"Jan 20{10 + i // 2}",
+                "end_date": f"Dec 20{11 + i // 2}",
                 "is_current": False,
                 "responsibilities": [
                     "Built and maintained the ingestion service",
@@ -122,9 +133,7 @@ class FakeProvider:
 
 def _settings(**overrides) -> LLMSettings:
     base = {
-        "provider": "openai",
-        "openai_model": "fake",
-        "anthropic_model": "fake",
+        "model": "fake",
         "max_concurrent": 12,
         "max_output_tokens": 32000,
         "call_timeout_seconds": 90,
@@ -292,3 +301,42 @@ def test_deterministic_guards_survive_a_tight_budget(fake_llm):
     result = _extract(_resume_text(), 1.5)
 
     assert "_audit" in result, "the groundedness pass was skipped under time pressure"
+
+
+def test_a_total_failure_is_an_error_not_a_blank_resume(fake_llm):
+    """A misconfigured model 404s on every call.
+
+    That used to come back as a clean, well-formed, entirely empty resume with
+    a 200 — which looks parsed, and is only noticed after it has been sent on.
+    """
+    provider = fake_llm()
+
+    async def always_404(system, user, **kwargs):
+        raise RuntimeError(
+            "Error code: 404 - The model `gpt-5.1-mini` does not exist "
+            "or you do not have access to it."
+        )
+
+    provider.complete = always_404
+
+    with pytest.raises(ExtractionProducedNothing, match="404"):
+        _extract(_resume_text(), 60)
+
+
+def test_a_resume_with_only_some_sections_still_comes_back(fake_llm):
+    """The guard must not fire on a thin resume — only on an empty result."""
+    provider = fake_llm()
+    original = provider.complete
+
+    # Matched on each agent's own opening line — "skills" alone appears in the
+    # structure prompt too ("NEVER manufacture a job out of a Skills section"),
+    # and knocking that out takes the work history with it.
+    async def no_skills_or_education(system, user, **kwargs):
+        if system.startswith(("Extract ALL education entries", "Extract ONLY skills")):
+            raise RuntimeError("that section is unavailable")
+        return await original(system, user, **kwargs)
+
+    provider.complete = no_skills_or_education
+
+    result = _extract(_resume_text(), 60)
+    assert len(result["work_experience"]) == JOB_COUNT

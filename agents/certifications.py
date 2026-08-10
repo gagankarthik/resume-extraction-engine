@@ -10,7 +10,12 @@ WHERE THEY MAY COME FROM — this is the whole rule:
 - ONLY from a dedicated section headed "Certifications", "Certificates", "Licenses", "Credentials", or an equivalent title.
 - If the resume has NO such section, return {"certifications": []}. An empty list is the correct answer. Do NOT go looking elsewhere to fill it.
 - NEVER build a certification out of a job responsibility, a skill, a tool name, a degree, or a training course. "Certified Scrum practices adopted across the team" is a responsibility, not a certification. "AWS" in a skills list is a technology, not a certification.
-- Extract EVERY entry inside a real certifications section, copied verbatim.
+- Extract EVERY entry inside a real certifications section, copied verbatim. Each printed line is ONE entry — never list the same credential twice, in any spelling.
+
+HOW TO SPLIT ONE LINE:
+- Resumes write a credential as "<name> - <issuer>" or "<name>, <issuer>". Put the credential in name and the body that issued it in issuing_organization: "Certified Agile Scrum Master - Scrum Alliance, USA" is name "Certified Agile Scrum Master", issuing_organization "Scrum Alliance, USA".
+- name must NOT repeat the issuer, and must NOT carry the section label ("Certifications:") or a bullet glyph.
+- If no issuer is written, issuing_organization is null. Never guess one.
 
 Return ONLY this JSON:
 {

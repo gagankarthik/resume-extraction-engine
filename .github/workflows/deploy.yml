@@ -103,11 +103,8 @@ jobs:
       - name: Terraform Plan
         run: terraform plan -out=tfplan
         env:
-          TF_VAR_model_provider:    ${{ secrets.MODEL_PROVIDER }}
           TF_VAR_openai_api_key:    ${{ secrets.OPENAI_API_KEY }}
           TF_VAR_openai_model:      ${{ secrets.OPENAI_MODEL }}
-          TF_VAR_anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          TF_VAR_anthropic_model:   ${{ secrets.ANTHROPIC_MODEL }}
           TF_VAR_use_orchestrator:  ${{ secrets.USE_ORCHESTRATOR }}
           # No default in variables.tf, deliberately: an empty secret here makes
           # the engine refuse every upload rather than accept anonymous ones.
@@ -117,11 +114,8 @@ jobs:
       - name: Terraform Apply
         run: terraform apply -auto-approve tfplan
         env:
-          TF_VAR_model_provider:    ${{ secrets.MODEL_PROVIDER }}
           TF_VAR_openai_api_key:    ${{ secrets.OPENAI_API_KEY }}
           TF_VAR_openai_model:      ${{ secrets.OPENAI_MODEL }}
-          TF_VAR_anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          TF_VAR_anthropic_model:   ${{ secrets.ANTHROPIC_MODEL }}
           TF_VAR_use_orchestrator:  ${{ secrets.USE_ORCHESTRATOR }}
           # No default in variables.tf, deliberately: an empty secret here makes
           # the engine refuse every upload rather than accept anonymous ones.

@@ -1,5 +1,5 @@
 """
-LLM processor — OpenAI (default) or Anthropic, switchable via MODEL_PROVIDER env var.
+LLM processor — the single-shot OpenAI path, and the shared post-processing.
 The provider client is a module-level singleton so the connection pool is reused
 across all concurrent requests (important for multi-client production use).
 """
@@ -17,6 +17,7 @@ from dotenv import load_dotenv
 from agents.auditor import ground_check
 from agents.base import get_token_usage, reset_token_usage
 from agents.deadline import Deadline
+from agents.polish import polish
 from agents.report import reset_report
 from config import get_settings
 from orchestrator import get_orchestrator
@@ -35,7 +36,6 @@ load_dotenv(Path(__file__).parent / ".env", override=True)
 # Singleton clients — created once, reused for every request
 # ------------------------------------------------------------------ #
 _openai_client = None
-_anthropic_client = None
 
 
 def _get_openai():
@@ -47,17 +47,6 @@ def _get_openai():
             raise RuntimeError("OPENAI_API_KEY is not set. Add it to your .env file.")
         _openai_client = AsyncOpenAI(api_key=api_key)
     return _openai_client
-
-
-def _get_anthropic():
-    global _anthropic_client
-    if _anthropic_client is None:
-        import anthropic
-        api_key = os.getenv("ANTHROPIC_API_KEY")
-        if not api_key:
-            raise RuntimeError("ANTHROPIC_API_KEY is not set. Add it to your .env file.")
-        _anthropic_client = anthropic.AsyncAnthropic(api_key=api_key)
-    return _anthropic_client
 
 
 # ------------------------------------------------------------------ #
@@ -397,37 +386,6 @@ async def _call_openai(user_message: str) -> tuple[str, dict]:
     }
 
 
-async def _call_anthropic(user_message: str) -> tuple[str, dict]:
-    model = os.getenv("ANTHROPIC_MODEL", "claude-opus-4-7")
-    client = _get_anthropic()
-
-    async with client.messages.stream(
-        model=model,
-        max_tokens=16000,
-        thinking={"type": "adaptive"},
-        output_config={"effort": "high"},
-        system=[{
-            "type": "text",
-            "text": SYSTEM_PROMPT,
-            "cache_control": {"type": "ephemeral"},
-        }],
-        messages=[{"role": "user", "content": user_message}],
-    ) as stream:
-        resp = await stream.get_final_message()
-
-    raw = next((b.text for b in resp.content if b.type == "text"), "")
-    return raw, {
-        "provider": "anthropic",
-        "model": model,
-        "usage": {
-            "input_tokens":        resp.usage.input_tokens,
-            "output_tokens":       resp.usage.output_tokens,
-            "cache_creation_tokens": getattr(resp.usage, "cache_creation_input_tokens", 0),
-            "cache_read_tokens":     getattr(resp.usage, "cache_read_input_tokens", 0),
-        },
-    }
-
-
 # ------------------------------------------------------------------ #
 # Public entry point
 # ------------------------------------------------------------------ #
@@ -499,11 +457,7 @@ async def process_resume(
             },
         }
     else:
-        provider = os.getenv("MODEL_PROVIDER", "openai").lower()
-        if provider == "anthropic":
-            raw_json_text, llm_info = await _call_anthropic(user_message)
-        else:
-            raw_json_text, llm_info = await _call_openai(user_message)
+        raw_json_text, llm_info = await _call_openai(user_message)
 
         # Strip accidental markdown fences
         text = raw_json_text.strip()
@@ -520,15 +474,25 @@ async def process_resume(
                 f"First 400 chars of response:\n{text[:400]}"
             ) from exc
 
-        # The single-shot path skips the orchestrator's audit stage, so run the
-        # groundedness guard here too — it strips AI-fabricated metric/impact
-        # bullets and ungrounded contact/client values against the source text.
+        # The single-shot path skips the orchestrator's audit and shape stages,
+        # so run both here too — the first strips AI-fabricated metric/impact
+        # bullets and ungrounded contact/client values against the source text,
+        # the second applies the presentation rules (degree abbreviations,
+        # nicknames, "Till Date", credentials listed once). Neither path should
+        # produce a differently-shaped resume from the same file.
         try:
             extracted, audit_warnings = ground_check(extracted, raw_text)
             if audit_warnings:
                 extracted["_audit"] = {"warnings": audit_warnings}
         except Exception as exc:
             logger.warning("[process_resume] Single-shot ground_check failed: %s", exc)
+
+        try:
+            polish_notes = polish(extracted)
+            if polish_notes:
+                extracted.setdefault("_audit", {}).setdefault("warnings", []).extend(polish_notes)
+        except Exception as exc:
+            logger.warning("[process_resume] Single-shot polish failed: %s", exc)
 
     # The audit and run reports travel under _metadata so they reach the UI
     # without polluting the resume schema itself.

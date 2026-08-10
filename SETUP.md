@@ -7,7 +7,7 @@ Complete instructions for local development and AWS Lambda production deployment
 ## Prerequisites
 
 - Python 3.11+
-- An OpenAI or Anthropic API key
+- An OpenAI API key
 - (For AWS deployment) AWS CLI configured, Terraform 1.6+
 
 ---
@@ -31,16 +31,11 @@ cp .env.example .env
 Edit `.env`:
 
 ```env
-# Provider: "openai" or "anthropic"
-MODEL_PROVIDER=openai
 
 # OpenAI
 OPENAI_API_KEY=sk-...
 OPENAI_MODEL=gpt-4o
 
-# Anthropic (only needed if MODEL_PROVIDER=anthropic)
-ANTHROPIC_API_KEY=sk-ant-...
-ANTHROPIC_MODEL=claude-opus-4-7
 
 # Pipeline mode: true = multi-agent, false = single-shot LLM call
 USE_ORCHESTRATOR=true
@@ -74,11 +69,8 @@ curl -X POST "http://localhost:8000/extract" \
 
 | Variable | Default | Required | Description |
 |---|---|---|---|
-| `MODEL_PROVIDER` | `openai` | No | `openai` or `anthropic` |
 | `OPENAI_API_KEY` | — | If using OpenAI | Your OpenAI secret key |
 | `OPENAI_MODEL` | `gpt-4o` | No | Any OpenAI chat model |
-| `ANTHROPIC_API_KEY` | — | If using Anthropic | Your Anthropic secret key |
-| `ANTHROPIC_MODEL` | `claude-opus-4-7` | No | Any Anthropic messages model |
 | `USE_ORCHESTRATOR` | `true` | No | `true` = multi-agent pipeline (higher accuracy); `false` = single-shot (faster, cheaper) |
 | `MAX_FILE_SIZE_MB` | `20` | No | Max upload size |
 
@@ -169,11 +161,8 @@ Go to your repository → **Settings → Secrets and variables → Actions → N
 |---|---|
 | `AWS_ACCESS_KEY_ID` | IAM user access key |
 | `AWS_SECRET_ACCESS_KEY` | IAM user secret key |
-| `MODEL_PROVIDER` | `openai` or `anthropic` |
 | `OPENAI_API_KEY` | Your OpenAI key |
 | `OPENAI_MODEL` | e.g. `gpt-4o` |
-| `ANTHROPIC_API_KEY` | Your Anthropic key (set to empty string if not using) |
-| `ANTHROPIC_MODEL` | e.g. `claude-opus-4-7` (set to empty string if not using) |
 
 ---
 

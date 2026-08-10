@@ -10,7 +10,7 @@ Supports two modes: a fast **single-shot LLM call** or a high-accuracy **multi-a
 
 - **Complete extraction** — verbatim bullet points, all metrics, every section, nothing skipped
 - **Multi-format** — PDF (layout-aware, multi-column), DOCX, DOC, plain text
-- **Dual LLM providers** — OpenAI GPT-4o or Anthropic Claude Opus 4.7, switchable via env var
+- **OpenAI** — any chat model, including the gpt-5 family (the renamed output-ceiling parameter is negotiated automatically)
 - **Multi-agent pipeline** — StructureAgent → 6 parallel section agents → AnalyticsAgent → ValidatorAgent
 - **Pydantic validation** — every field type-checked and coerced after extraction
 - **Text normalization** — ligatures, broken hyphens, page numbers, running headers cleaned before LLM sees the text
@@ -60,7 +60,7 @@ resume-extraction-engine/
 ├── main.py              # FastAPI app, routes, CORS, file type resolution
 ├── extractor.py         # PDF / DOCX / TXT text extraction
 ├── normalizer.py        # Text normalization pipeline
-├── processor.py         # Single-shot LLM call (OpenAI or Anthropic)
+├── processor.py         # Single-shot LLM call
 ├── orchestrator.py      # Multi-agent pipeline coordinator
 ├── validator.py         # Pydantic models for every resume section
 ├── handler.py           # AWS Lambda entrypoint (Mangum wrapper)
@@ -98,7 +98,7 @@ pip install -r requirements.txt
 
 # 2. Configure
 cp .env.example .env
-# Add your API key and set MODEL_PROVIDER
+# Add your API key
 
 # 3. Run
 uvicorn main:app --reload
@@ -111,11 +111,8 @@ uvicorn main:app --reload
 
 | Variable | Default | Description |
 |---|---|---|
-| `MODEL_PROVIDER` | `openai` | `openai` or `anthropic` |
-| `OPENAI_API_KEY` | — | Required when `MODEL_PROVIDER=openai` |
+| `OPENAI_API_KEY` | — | Required |
 | `OPENAI_MODEL` | `gpt-4o` | Any OpenAI chat model |
-| `ANTHROPIC_API_KEY` | — | Required when `MODEL_PROVIDER=anthropic` |
-| `ANTHROPIC_MODEL` | `claude-opus-4-7` | Any Anthropic messages model |
 | `USE_ORCHESTRATOR` | `true` | `true` = multi-agent pipeline, `false` = single-shot |
 | `MAX_FILE_SIZE_MB` | `20` | Upload size limit |
 

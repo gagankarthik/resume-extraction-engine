@@ -105,11 +105,8 @@ resource "aws_lambda_function" "api" {
 
   environment {
     variables = {
-      MODEL_PROVIDER    = var.model_provider
       OPENAI_API_KEY    = var.openai_api_key
       OPENAI_MODEL      = var.openai_model
-      ANTHROPIC_API_KEY = var.anthropic_api_key
-      ANTHROPIC_MODEL   = var.anthropic_model
       USE_ORCHESTRATOR  = var.use_orchestrator
       MAX_FILE_SIZE_MB  = "20"
 
