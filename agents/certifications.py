@@ -14,8 +14,10 @@ WHERE THEY MAY COME FROM — this is the whole rule:
 
 HOW TO SPLIT ONE LINE:
 - Resumes write a credential as "<name> - <issuer>" or "<name>, <issuer>". Put the credential in name and the body that issued it in issuing_organization: "Certified Agile Scrum Master - Scrum Alliance, USA" is name "Certified Agile Scrum Master", issuing_organization "Scrum Alliance, USA".
+- The issuer is just as often written FIRST, as part of the credential's official name: "Tricentis Certified Tosca Automation Specialist", "Microsoft Certified: Azure Administrator Associate", "AWS Certified Solutions Architect". When the line opens with the name of the organization that awards it, that organization is the issuing_organization and the rest is the name — "Tricentis Certified Tosca Automation Specialist" is name "Certified Tosca Automation Specialist", issuing_organization "Tricentis". This is READING the line, not guessing: the issuer must be printed there.
+- Do NOT split off a leading word that is part of the credential rather than an organization. "Certified Information Systems Auditor" opens with "Certified", not with an issuer — name it whole and leave issuing_organization null.
 - name must NOT repeat the issuer, and must NOT carry the section label ("Certifications:") or a bullet glyph.
-- If no issuer is written, issuing_organization is null. Never guess one.
+- If no issuer is written anywhere in the entry, issuing_organization is null. Never guess one, and never infer it from the technology the credential covers.
 
 Return ONLY this JSON:
 {

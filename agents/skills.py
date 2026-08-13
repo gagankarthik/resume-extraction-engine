@@ -325,6 +325,25 @@ def derive_union_fields(skills: dict) -> dict:
     return skills
 
 
+# The label a resume puts on the tech stack of ONE job, not on a skills
+# category. The inventory pass reads the whole document — it has to, because
+# real resumes scatter their skills blocks between the work sections — and
+# "Environment: Tosca, SQL Developer, Jira, AutoSys" under a job has exactly
+# the shape it is told to copy: a label with skills under it.
+#
+# It is already extracted as that job's technologies and printed beneath it as
+# "Key Technologies/Skills". Copying it a second time gave one submitted resume
+# four Technical Skills categories all called "Environment", each repeating a
+# different job's stack. The stack belongs to the job; the category is noise.
+_PER_JOB_TECH_LABEL = re.compile(
+    r"^(?:key\s+)?(?:"
+    r"environment|technolog(?:y|ies)|tech\s*stack|technology\s+stack"
+    r"|tools?\s+used|software\s+used|platforms?\s+used"
+    r")\b(?:\s*[/&,]\s*skills?)?$",
+    re.I,
+)
+
+
 def _clean_categories(value: object) -> list[dict]:
     """The categories[] entries worth keeping, whatever shape they arrived in."""
     if isinstance(value, dict):
@@ -337,8 +356,13 @@ def _clean_categories(value: object) -> list[dict]:
             continue
         skills, _, _ = tidy_skill_list(cat.get("skills"))
         name = cat.get("name")
-        if skills and isinstance(name, str) and name.strip():
-            out.append({"name": name.strip(), "skills": skills})
+        if not skills or not isinstance(name, str) or not name.strip():
+            continue
+        label = name.strip().rstrip(":").strip()
+        if _PER_JOB_TECH_LABEL.match(label):
+            logger.info("[SkillsAgent] Dropping per-job tech line read as a category: %r", label)
+            continue
+        out.append({"name": name.strip(), "skills": skills})
     return out
 
 

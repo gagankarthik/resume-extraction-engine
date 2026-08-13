@@ -8,6 +8,7 @@ Rules:
 """
 from __future__ import annotations
 
+import re
 from typing import Any, Optional
 
 from pydantic import BaseModel, Field, model_validator
@@ -126,6 +127,44 @@ class PersonalInformationModel(_Base):
 # work_experience
 # ---------------------------------------------------------------------------
 
+# A heading that belongs to the resume, not to one job. When the last job on a
+# page absorbs the section that follows it, the leftover arrives as a subsection
+# titled "CERTIFICATIONS" or "EDUCATION" whose content is that whole section —
+# already extracted properly into certifications[] or education[], and printed
+# a second time in the middle of a job's duties on the submitted document.
+#
+# Anchored, not containment-matched: "Certification Testing" and "Skills
+# Transfer" are things a job really does, and a job subsection legitimately
+# named "Project Description" must survive.
+_LEAKED_SECTION_TITLE = re.compile(
+    r"^\W*(?:"
+    r"certificat(?:e|es|ion|ions)?|licen[cs]es?|credentials?|accreditations?"
+    r"|education(?:al\s+background|al\s+qualifications?)?|academics?"
+    r"|(?:technical|core|key|professional)?\s*(?:skills?|competenc(?:y|ies))"
+    r"|areas?\s+of\s+expertise|technical\s+expertise"
+    r"|(?:professional\s+|career\s+|executive\s+)?summary|profile|objective"
+    r"|(?:work|employment|professional)\s+(?:experience|history)"
+    r"|publications?|patents?|awards?|references?|languages?|interests?"
+    r")\W*$",
+    re.I,
+)
+
+
+def _drop_leaked_sections(value: Any) -> list[Any]:
+    """A job's subsections, minus the ones that are really resume sections."""
+    if not isinstance(value, list):
+        return []
+    return [
+        sub
+        for sub in value
+        if not (
+            isinstance(sub, dict)
+            and isinstance(sub.get("title"), str)
+            and _LEAKED_SECTION_TITLE.match(sub["title"])
+        )
+    ]
+
+
 class WorkExperienceItem(_Base):
     company_name: Optional[str] = None
     job_title: Optional[str] = None
@@ -187,6 +226,8 @@ class WorkExperienceItem(_Base):
                 if flat:
                     out["responsibilities"] = [str(x).strip() for x in flat if x and str(x).strip()]
                     out["projects"] = []
+
+        out["subsections"] = _drop_leaked_sections(out.get("subsections"))
 
         return out
 

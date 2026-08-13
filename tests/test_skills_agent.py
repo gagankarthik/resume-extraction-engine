@@ -192,3 +192,43 @@ def test_packed_and_prose_entries_are_cleaned_on_the_way_in(run_skills):
     ]
     taxonomy_input = next(user for step, user in provider.seen if step == "taxonomy")
     assert "sponsorship" not in taxonomy_input
+
+
+def test_a_jobs_environment_line_is_not_a_skills_category(run_skills):
+    """The tech stack under one job belongs to that job, not to Technical Skills.
+
+    The inventory pass reads the whole document — it has to, because real
+    resumes put skills blocks between the work sections — so "Environment:
+    Tosca, SQL Developer" under a job arrives looking exactly like a labelled
+    skills category. It is already extracted as that job's technologies and
+    printed beneath it, and one submitted resume came out with four Technical
+    Skills categories all called "Environment", one per job.
+    """
+    provider = FakeProvider(
+        inventory={
+            "categories": [
+                {"name": "TOSCA Platform", "skills": ["Tricentis TOSCA AS1"]},
+                {"name": "Environment", "skills": ["Tosca", "SQL Developer"]},
+                {"name": "Key Technologies/Skills", "skills": ["QTP", "Sybase"]},
+            ],
+            "uncategorized": [],
+        },
+        taxonomy={"skills": {"other_skills": ["Tricentis TOSCA AS1"]}},
+    )
+    skills = run_skills(provider)
+
+    assert [c["name"] for c in skills["categories"]] == ["TOSCA Platform"]
+
+
+def test_a_real_category_that_merely_starts_with_environment_is_kept(run_skills):
+    """"Environment Management" is a discipline, not a job's tech line."""
+    provider = FakeProvider(
+        inventory={
+            "categories": [{"name": "Environment Management", "skills": ["Terraform"]}],
+            "uncategorized": [],
+        },
+        taxonomy={"skills": {"other_skills": ["Terraform"]}},
+    )
+    skills = run_skills(provider)
+
+    assert [c["name"] for c in skills["categories"]] == ["Environment Management"]
