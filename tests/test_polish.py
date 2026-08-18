@@ -185,6 +185,36 @@ def test_client_bullets_are_not_repeated_in_the_flat_list():
     assert work[0]["responsibilities"] == ["Ran the daily standup"]
 
 
+def test_project_technologies_are_not_repeated_at_the_job_level():
+    # A job with one project has technologies_used identical to that project's
+    # keyTechnologies — printing both shows "Key Technologies/Skills" twice,
+    # word for word, once under the job and once under the project.
+    work = [{
+        "company_name": "Capgemini USA Inc.",
+        "technologies_used": ["TOSCA", "Guidewire PolicyCenter"],
+        "projects": [{
+            "clientName": "Grange Insurance",
+            "keyTechnologies": "TOSCA, Guidewire PolicyCenter",
+        }],
+    }]
+    polish_work(work)
+    assert work[0]["technologies_used"] == []
+    assert work[0]["projects"][0]["keyTechnologies"] == "TOSCA, Guidewire PolicyCenter"
+
+
+def test_a_job_level_technology_outside_any_project_survives():
+    work = [{
+        "company_name": "Capgemini USA Inc.",
+        "technologies_used": ["TOSCA", "Jira"],
+        "projects": [{
+            "clientName": "Grange Insurance",
+            "keyTechnologies": "TOSCA",
+        }],
+    }]
+    polish_work(work)
+    assert work[0]["technologies_used"] == ["Jira"]
+
+
 # ── One role, listed once ───────────────────────────────────────────────────
 
 def test_the_same_engagement_listed_twice_is_kept_once():

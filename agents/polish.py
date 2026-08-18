@@ -177,6 +177,7 @@ def polish_work(work: object) -> None:
             continue
 
         covered: set[str] = set()
+        covered_techs: set[str] = set()
         for proj in projects:
             if not isinstance(proj, dict):
                 continue
@@ -186,6 +187,12 @@ def polish_work(work: object) -> None:
             for bullet in proj.get("projectResponsibilities") or []:
                 if isinstance(bullet, str):
                     covered.add(_squash(bullet))
+            key_techs = proj.get("keyTechnologies")
+            if isinstance(key_techs, str):
+                for tech in key_techs.split(","):
+                    tech = tech.strip()
+                    if tech:
+                        covered_techs.add(_squash(tech))
 
         # A bullet that sits under a client/project must not also sit in the
         # job's flat list — the rendered resume would print it twice, once per
@@ -195,6 +202,18 @@ def polish_work(work: object) -> None:
             job["responsibilities"] = [
                 r for r in resp
                 if not (isinstance(r, str) and _squash(r) in covered)
+            ]
+
+        # Same duplication, for technologies: a job's technologies_used is the
+        # WHOLE segment's stack, so on a job with one project it comes out
+        # identical to that project's own keyTechnologies — printed once under
+        # the job as "Key Technologies/Skills" and again, word for word, under
+        # the project.
+        techs = job.get("technologies_used")
+        if covered_techs and isinstance(techs, list):
+            job["technologies_used"] = [
+                t for t in techs
+                if not (isinstance(t, str) and _squash(t) in covered_techs)
             ]
 
 
