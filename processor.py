@@ -17,7 +17,7 @@ from dotenv import load_dotenv
 from agents.auditor import ground_check
 from agents.base import get_token_usage, reset_token_usage
 from agents.deadline import Deadline
-from agents.polish import polish
+from agents.polish import bulletize_work_experience, polish
 from agents.report import reset_report
 from config import get_settings
 from orchestrator import get_orchestrator
@@ -517,6 +517,12 @@ async def process_resume(
     }
 
     cleaned, warnings = validate_resume_json(extracted)
+
+    # Bullet text for the rendered document, not another array to iterate. Runs
+    # last, after validation, so every array-shaped stage before it (structure's
+    # bullet counts, the auditor's grounding and split-metric rejoin, Pydantic's
+    # own list[str] coercion) still sees the one-item-per-bullet array it needs.
+    bulletize_work_experience(cleaned.get("work_experience"))
 
     # Surface what the pipeline knows about its own output quality instead of
     # discarding it — the UI shows this so incomplete extractions are visible.

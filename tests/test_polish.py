@@ -12,6 +12,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from agents.degrees import abbreviate, normalize_education, split_degree
 from agents.polish import (
+    bulletize,
+    bulletize_work_experience,
     clean_name,
     dedupe_against_certifications,
     dedupe_roles,
@@ -21,6 +23,7 @@ from agents.polish import (
     polish_work,
     strip_label,
     tidy_date,
+    titlecase_name,
 )
 from agents.skills import looks_like_skill, split_packed_skills, tidy_skill_list
 
@@ -108,6 +111,25 @@ def test_full_name_assembled_when_only_parts_survive():
     assert pi["full_name"] == "Ada Lovelace"
 
 
+def test_shouted_name_is_recased_to_title_case():
+    assert titlecase_name("SHASHE KIRAN GANJI") == "Shashe Kiran Ganji"
+    assert titlecase_name("shashe kiran ganji") == "Shashe Kiran Ganji"
+
+
+def test_mixed_case_name_is_left_alone():
+    # Written this way on purpose — a blind title-case would flatten it.
+    for name in ("Siobhan O'Brien", "Mary Smith-Jones", "McDonald", "DeSouza"):
+        assert titlecase_name(name) == name
+
+
+def test_polish_personal_recases_a_shouted_name():
+    pi = {"full_name": "SHASHE KIRAN GANJI", "first_name": "SHASHE KIRAN", "last_name": "GANJI"}
+    polish_personal(pi)
+    assert pi["full_name"] == "Shashe Kiran Ganji"
+    assert pi["first_name"] == "Shashe Kiran"
+    assert pi["last_name"] == "Ganji"
+
+
 # ── Labels ──────────────────────────────────────────────────────────────────
 
 def test_inline_labels_are_stripped_from_values():
@@ -163,6 +185,33 @@ def test_client_bullets_are_not_repeated_in_the_flat_list():
     assert work[0]["company_name"] == "Acme Consulting"
     assert work[0]["projects"][0]["clientName"] == "Diligent Insurance"
     assert work[0]["responsibilities"] == ["Ran the daily standup"]
+
+
+# ── Bullet formatting for output ────────────────────────────────────────────
+
+def test_bulletize_puts_one_bullet_per_line():
+    assert bulletize(["Led the migration", "Ran the standup"]) == \
+        "• Led the migration\n• Ran the standup"
+
+
+def test_bulletize_leaves_empty_or_non_list_alone():
+    assert bulletize([]) == []
+    assert bulletize(None) is None
+    assert bulletize("already a string") == "already a string"
+
+
+def test_bulletize_work_experience_covers_jobs_and_projects():
+    work = [{
+        "company_name": "Acme Consulting",
+        "responsibilities": ["Led the claims migration", "Ran the daily standup"],
+        "projects": [{
+            "clientName": "Diligent Insurance",
+            "projectResponsibilities": ["Directed the QA team"],
+        }],
+    }]
+    bulletize_work_experience(work)
+    assert work[0]["responsibilities"] == "• Led the claims migration\n• Ran the daily standup"
+    assert work[0]["projects"][0]["projectResponsibilities"] == "• Directed the QA team"
 
 
 # ── One role, listed once ───────────────────────────────────────────────────

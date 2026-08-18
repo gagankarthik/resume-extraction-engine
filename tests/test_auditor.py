@@ -356,6 +356,44 @@ def test_metric_split_into_its_own_bullet_is_rejoined():
     assert any("Rejoined" in w for w in warnings), warnings
 
 
+CLIENT_SPLIT_RESUME = """
+WORK EXPERIENCE
+Acme Consulting
+Client: Globex Insurance
+• Directed the claims migration
+  reducing rating-related defect escapes by an estimated 25%
+• Led the QA team through the release
+"""
+
+
+def test_metric_split_inside_a_project_block_is_rejoined():
+    # The same "trailing detail becomes its own bullet" failure, but inside a
+    # projects[].projectResponsibilities[] block instead of the flat list —
+    # merge_split_bullets has to cover both, since consulting resumes put most
+    # of their bullets under a named client/project rather than at the job level.
+    blocks = source_bullet_blocks(CLIENT_SPLIT_RESUME)
+    merged = {"work_experience": [{
+        "company_name": "Acme Consulting",
+        "responsibilities": [],
+        "projects": [{
+            "clientName": "Globex Insurance",
+            "projectResponsibilities": [
+                "Directed the claims migration",
+                "reducing rating-related defect escapes by an estimated 25%",
+                "Led the QA team through the release",
+            ],
+        }],
+    }]}
+    merged, warnings = ground_check(merged, CLIENT_SPLIT_RESUME)
+    resp = merged["work_experience"][0]["projects"][0]["projectResponsibilities"]
+
+    assert len(resp) == 2, resp
+    assert resp[0] == blocks[0]
+    assert "reducing rating-related defect escapes by an estimated 25%" in resp[0]
+    assert resp[1] == "Led the QA team through the release"
+    assert any("Rejoined" in w for w in warnings), warnings
+
+
 # A long consulting resume stops using glyphs partway through: the last bullet
 # of one job is followed by dozens of unbulleted lines belonging to the jobs
 # after it. Folding those into that bullet produced a block containing another

@@ -709,6 +709,15 @@ def ground_check(merged: dict, raw_text: str) -> tuple[dict, list[str]]:
                     f"({company}/{pname or 'project'})"
                 )
 
+            pr_rejoined, pr_split_count = merge_split_bullets(
+                proj.get("projectResponsibilities"), blocks, blocks_squashed)
+            if pr_split_count:
+                proj["projectResponsibilities"] = pr_rejoined
+                warnings.append(
+                    f"Rejoined {pr_split_count} detail(s) split out of their own bullet "
+                    f"({company}/{pname or 'project'})"
+                )
+
             pr_scrubbed, pr_dropped, pr_fixed = _scrub_bullets(
                 proj.get("projectResponsibilities"), token_set, source_figures, line_index)
             if pr_dropped or pr_fixed:
