@@ -771,6 +771,21 @@ def test_ground_check_drops_inferred_job_technologies():
     assert any("not named in the resume" in w for w in warnings)
 
 
+def test_ground_check_dedupes_a_jobs_technologies():
+    # A renderer that prints one "Key Technologies/Skills" line per array entry
+    # shows the same technology twice when the model names it twice in one job.
+    merged = {
+        "work_experience": [{
+            "company_name": "Acme Corporation",
+            "technologies_used": ["Python", "Python", "Node.js"],
+        }],
+    }
+    merged, warnings = ground_check(merged, TECH_RESUME)
+    kept = merged["work_experience"][0]["technologies_used"]
+    assert kept == ["Python", "Node.js"], kept
+    assert any("duplicate technology" in w for w in warnings), warnings
+
+
 def test_scrub_skills_drops_inferred_skills_across_buckets():
     skills = {
         "programming_languages": ["Python", "Ruby"],

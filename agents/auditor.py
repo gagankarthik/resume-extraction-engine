@@ -498,6 +498,27 @@ def _scrub_techs(items: Any, src: tuple[set[str], str, str]) -> tuple[list, int]
     return kept, len(items) - len(kept)
 
 
+def _dedupe_strs(items: Any) -> tuple[Any, int]:
+    """The same string named more than once in one list, kept only the first time.
+
+    The model occasionally names a technology twice within one job's
+    technologies_used — nothing upstream removes the repeat, and a renderer
+    that prints one "Key Technologies/Skills" line per array entry then shows
+    the same technology twice back to back.
+    """
+    if not isinstance(items, list) or len(items) < 2:
+        return items, 0
+    seen: set[str] = set()
+    kept = []
+    for item in items:
+        key = _squash(item) if isinstance(item, str) else repr(item)
+        if key and key in seen:
+            continue
+        seen.add(key)
+        kept.append(item)
+    return kept, len(items) - len(kept)
+
+
 def _scrub_tech_string(value: Any, src: tuple[set[str], str, str]) -> tuple[Any, int]:
     """Same filter for the comma-separated keyTechnologies string on projects."""
     if not isinstance(value, str) or not value.strip():
@@ -683,6 +704,14 @@ def ground_check(merged: dict, raw_text: str) -> tuple[dict, list[str]]:
         if tech_dropped:
             job["technologies_used"] = tech_scrubbed
             warnings.append(f"Removed {tech_dropped} technology/technologies not named in the resume ({company})")
+
+        tech_deduped, tech_dupes = _dedupe_strs(job.get("technologies_used"))
+        if tech_dupes:
+            job["technologies_used"] = tech_deduped
+            warnings.append(
+                f"Removed {tech_dupes} duplicate technology/technologies from the same "
+                f"job ({company}) — printed once under \"Key Technologies/Skills\", not twice"
+            )
 
         kept_projects = []
         for proj in job.get("projects") or []:
