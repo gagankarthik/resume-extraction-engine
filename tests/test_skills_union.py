@@ -14,7 +14,7 @@ would have noticed.
 """
 from __future__ import annotations
 
-from agents.skills import derive_union_fields, _drop_category_label_duplicates
+from agents.skills import _drop_category_label_duplicates, derive_union_fields
 
 
 def test_technical_union_covers_every_technical_bucket():
