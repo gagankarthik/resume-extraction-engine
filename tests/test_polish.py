@@ -185,6 +185,49 @@ def test_client_bullets_are_not_repeated_in_the_flat_list():
     assert work[0]["responsibilities"] == ["Ran the daily standup"]
 
 
+def test_a_project_bullets_trailing_clause_is_not_repeated_as_its_own_flat_item():
+    # Real output: the model kept only the metric clause off the tail of a
+    # project bullet as its own flat responsibility, while the complete
+    # bullet also landed correctly under the project.
+    work = [{
+        "company_name": "Capgemini USA Inc.",
+        "responsibilities": [
+            "reducing regression cycle time by an estimated 20% across an estimated 3 major releases.",
+            "Directed QA effort estimation, resource planning, defect review, and release readiness for an estimated team of 10+ engineers across onsite and offshore locations.",
+        ],
+        "projects": [{
+            "clientName": "State Farm Insurance",
+            "projectResponsibilities": [
+                "TOSCA Automation Leadership: Led TOSCA automation delivery for Guidewire and Enterprise Claims "
+                "implementation, managing regression suites across Billing, Rating, Policy, and Commercial Lines "
+                "systems - reducing regression cycle time by an estimated 20% across an estimated 3 major releases.",
+                "Team & Resource Management: Directed QA effort estimation, resource planning, defect review, and "
+                "release readiness for an estimated team of 10+ engineers across onsite and offshore locations.",
+                "Cloud & ETL Validation: Led AWS-based cloud migration and ETL testing using SQL validation across "
+                "a multi-phase data migration program.",
+            ],
+        }],
+    }]
+    polish_work(work)
+    assert work[0]["responsibilities"] == []
+    assert len(work[0]["projects"][0]["projectResponsibilities"]) == 3
+
+
+def test_a_short_flat_bullet_is_not_dropped_on_coincidental_overlap():
+    # A short, generic phrase must not be treated as a duplicate just because
+    # it happens to appear inside unrelated project bullet text.
+    work = [{
+        "company_name": "Acme Corporation",
+        "responsibilities": ["Led QA"],
+        "projects": [{
+            "clientName": "Diligent Insurance",
+            "projectResponsibilities": ["Directed the automated QA program across three release trains"],
+        }],
+    }]
+    polish_work(work)
+    assert work[0]["responsibilities"] == ["Led QA"]
+
+
 def test_project_technologies_are_not_repeated_at_the_job_level():
     # A job with one project has technologies_used identical to that project's
     # keyTechnologies — printing both shows "Key Technologies/Skills" twice,

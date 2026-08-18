@@ -145,6 +145,32 @@ def _squash(value: object) -> str:
     return re.sub(r"[^a-z0-9]+", "", str(value or "").lower())
 
 
+# Below this length (after squashing) a containment match is refused: a short,
+# generic phrase can turn up inside unrelated bullet text by coincidence, and
+# only an exact match should count as the same sentence at that length.
+_MIN_FRAGMENT_LEN = 20
+
+
+def _duplicates_a_project_bullet(resp_squashed: str, covered: list[str]) -> bool:
+    """True when a flat responsibility is a project bullet under another name.
+
+    Two shapes seen on real output, neither an exact copy of the project
+    bullet: the model drops the project bullet's "Label: " prefix and keeps
+    the rest ("Directed QA effort estimation..." for "Team & Resource
+    Management: Directed QA effort estimation..."), or keeps only its
+    trailing clause ("...reducing regression cycle time by an estimated
+    20%"). Both are the same sentence the candidate wrote once, so
+    containment counts as a duplicate as well as equality.
+    """
+    if not resp_squashed:
+        return False
+    if resp_squashed in covered:
+        return True
+    if len(resp_squashed) < _MIN_FRAGMENT_LEN:
+        return False
+    return any(resp_squashed in cov or cov in resp_squashed for cov in covered)
+
+
 def polish_work(work: object) -> None:
     """Clean labels off the job/client/project names and settle current roles.
 
@@ -176,7 +202,7 @@ def polish_work(work: object) -> None:
         if not isinstance(projects, list):
             continue
 
-        covered: set[str] = set()
+        covered: list[str] = []
         covered_techs: set[str] = set()
         for proj in projects:
             if not isinstance(proj, dict):
@@ -186,7 +212,7 @@ def polish_work(work: object) -> None:
                     proj[field] = strip_label(proj.get(field))
             for bullet in proj.get("projectResponsibilities") or []:
                 if isinstance(bullet, str):
-                    covered.add(_squash(bullet))
+                    covered.append(_squash(bullet))
             key_techs = proj.get("keyTechnologies")
             if isinstance(key_techs, str):
                 for tech in key_techs.split(","):
@@ -196,12 +222,16 @@ def polish_work(work: object) -> None:
 
         # A bullet that sits under a client/project must not also sit in the
         # job's flat list — the rendered resume would print it twice, once per
-        # place it was found.
+        # place it was found. Not always the SAME bullet, either: the model
+        # sometimes drops the "Label: " prefix or keeps only the trailing
+        # clause ("...reducing regression cycle time by 20%") as its own flat
+        # item while the complete bullet also lands under the project, so
+        # containment counts as a duplicate too — not just an exact match.
         resp = job.get("responsibilities")
         if covered and isinstance(resp, list):
             job["responsibilities"] = [
                 r for r in resp
-                if not (isinstance(r, str) and _squash(r) in covered)
+                if not (isinstance(r, str) and _duplicates_a_project_bullet(_squash(r), covered))
             ]
 
         # Same duplication, for technologies: a job's technologies_used is the
