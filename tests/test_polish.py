@@ -12,8 +12,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from agents.degrees import abbreviate, normalize_education, split_degree
 from agents.polish import (
-    bulletize,
-    bulletize_work_experience,
     clean_name,
     dedupe_against_certifications,
     dedupe_roles,
@@ -185,33 +183,6 @@ def test_client_bullets_are_not_repeated_in_the_flat_list():
     assert work[0]["company_name"] == "Acme Consulting"
     assert work[0]["projects"][0]["clientName"] == "Diligent Insurance"
     assert work[0]["responsibilities"] == ["Ran the daily standup"]
-
-
-# ── Bullet formatting for output ────────────────────────────────────────────
-
-def test_bulletize_puts_one_bullet_per_line():
-    assert bulletize(["Led the migration", "Ran the standup"]) == \
-        "• Led the migration\n• Ran the standup"
-
-
-def test_bulletize_leaves_empty_or_non_list_alone():
-    assert bulletize([]) == []
-    assert bulletize(None) is None
-    assert bulletize("already a string") == "already a string"
-
-
-def test_bulletize_work_experience_covers_jobs_and_projects():
-    work = [{
-        "company_name": "Acme Consulting",
-        "responsibilities": ["Led the claims migration", "Ran the daily standup"],
-        "projects": [{
-            "clientName": "Diligent Insurance",
-            "projectResponsibilities": ["Directed the QA team"],
-        }],
-    }]
-    bulletize_work_experience(work)
-    assert work[0]["responsibilities"] == "• Led the claims migration\n• Ran the daily standup"
-    assert work[0]["projects"][0]["projectResponsibilities"] == "• Directed the QA team"
 
 
 # ── One role, listed once ───────────────────────────────────────────────────

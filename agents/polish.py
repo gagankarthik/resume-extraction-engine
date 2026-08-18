@@ -355,44 +355,6 @@ def dedupe_against_certifications(merged: dict) -> int:
     return removed
 
 
-# ── Bullet formatting for output ────────────────────────────────────────────
-
-# The array survives the whole pipeline as separate items — StructureAgent's
-# bullet count, the auditor's per-bullet grounding and split-metric rejoin, the
-# validator's count cross-check — all depend on one array element per bullet.
-# But the document tool downstream of this API has been rendering that array as
-# one run-on paragraph instead of a bulleted list, and there is no fixing that
-# from here. What IS in reach: matching the same fix professional_summary
-# already uses for the identical problem — hand back one string with each
-# bullet on its own "• "-prefixed line, so the bullets survive even a renderer
-# that only knows how to print a string. This runs last, after every stage that
-# needs the array form is done with it.
-
-
-def bulletize(items: object) -> object:
-    """A list of responsibility strings as one "• "-per-line string."""
-    if not isinstance(items, list) or not items:
-        return items
-    lines = [item.strip() for item in items if isinstance(item, str) and item.strip()]
-    if not lines:
-        return items
-    return "\n".join(f"• {line}" for line in lines)
-
-
-def bulletize_work_experience(work: object) -> None:
-    """Turn each job's responsibilities, and each project's, into bullet text."""
-    if not isinstance(work, list):
-        return
-    for job in work:
-        if not isinstance(job, dict):
-            continue
-        if "responsibilities" in job:
-            job["responsibilities"] = bulletize(job["responsibilities"])
-        for proj in job.get("projects") or []:
-            if isinstance(proj, dict) and "projectResponsibilities" in proj:
-                proj["projectResponsibilities"] = bulletize(proj["projectResponsibilities"])
-
-
 # ── Entry point ─────────────────────────────────────────────────────────────
 
 

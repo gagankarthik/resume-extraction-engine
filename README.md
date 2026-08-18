@@ -172,7 +172,7 @@ print(r.json())
       "end_date": "Present",
       "is_current": true,
       "team_size": 12,
-      "responsibilities": "• ...\n• ...",
+      "responsibilities": ["..."],
       "achievements": ["..."],
       "technologies_used": ["Python", "FastAPI"]
     }
