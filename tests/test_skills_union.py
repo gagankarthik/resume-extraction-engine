@@ -14,7 +14,7 @@ would have noticed.
 """
 from __future__ import annotations
 
-from agents.skills import derive_union_fields
+from agents.skills import derive_union_fields, _drop_category_label_duplicates
 
 
 def test_technical_union_covers_every_technical_bucket():
@@ -121,3 +121,36 @@ def test_categories_carry_the_unions_when_the_taxonomy_pass_failed():
 
     assert skills["technical_skills"] == ["Procure to Pay (PTP)", "QM", "Solution Manager"]
     assert skills["all_skills_raw"] == ["Procure to Pay (PTP)", "QM", "Solution Manager"]
+
+
+def test_a_category_label_repeated_as_a_loose_skill_is_dropped():
+    """Real output: a custom section's own heading turned up a second time as
+    a flat "skill" in a bucket (most often via the audit's recovery pass,
+    which hands back a whole missed resume line, heading included) --
+    alongside the skills that already sit correctly under that heading.
+    """
+    skills = derive_union_fields({
+        "tools_and_platforms": [
+            "CI/CD Integration", "TOSCA Pipeline Integration", "Continuous Testing",
+        ],
+        "other_skills": ["Supporting Skills", "SQL & ETL Validation"],
+        "categories": [
+            {"name": "CI/CD Integration", "skills": [
+                "TOSCA Pipeline Integration", "Continuous Testing", "Release Gate Automation",
+            ]},
+            {"name": "Supporting Skills", "skills": ["SQL & ETL Validation", "Agile/Scrum"]},
+        ],
+    })
+
+    assert skills["tools_and_platforms"] == ["TOSCA Pipeline Integration", "Continuous Testing"]
+    assert skills["other_skills"] == ["SQL & ETL Validation"]
+
+
+def test_a_skill_that_merely_shares_words_with_a_label_survives():
+    # Only an exact (squashed) match to the category's own name is dropped --
+    # a real skill must not be caught just for overlapping words.
+    skills = {"other_skills": ["CI/CD pipelines"], "categories": [
+        {"name": "CI/CD Integration", "skills": ["TOSCA Pipeline Integration"]},
+    ]}
+    _drop_category_label_duplicates(skills)
+    assert skills["other_skills"] == ["CI/CD pipelines"]

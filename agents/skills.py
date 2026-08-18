@@ -295,6 +295,40 @@ def _category_skills(skills: dict) -> list[str]:
     return _dedupe(out)
 
 
+def _squash(value: object) -> str:
+    return re.sub(r"[^a-z0-9]+", "", str(value or "").lower())
+
+
+def _drop_category_label_duplicates(skills: dict) -> None:
+    """A bucket entry that is really one of the resume's own category labels.
+
+    A custom skills section like "CI/CD Integration: TOSCA Pipeline
+    Integration, Continuous Testing, ..." is correctly kept whole under
+    categories[] — that is the resume's own grouping. But the same label has
+    also turned up a second time as a loose entry in the flat buckets (most
+    often surfacing through the audit's recovery pass, which hands back
+    resume LINES it found uncovered, heading included, rather than just the
+    skills under it). The label belongs to the category it already heads;
+    finding it again as a "skill" named "CI/CD Integration" is that label
+    with nowhere else to sit.
+    """
+    labels = {
+        _squash(cat.get("name"))
+        for cat in (skills.get("categories") or [])
+        if isinstance(cat, dict) and isinstance(cat.get("name"), str)
+    }
+    labels.discard("")
+    if not labels:
+        return
+    for bucket in _ALL_BUCKETS:
+        items = skills.get(bucket)
+        if isinstance(items, list):
+            skills[bucket] = [
+                s for s in items
+                if not (isinstance(s, str) and _squash(s) in labels)
+            ]
+
+
 def derive_union_fields(skills: dict) -> dict:
     """Fill technical_skills and all_skills_raw from the buckets.
 
@@ -319,6 +353,7 @@ def derive_union_fields(skills: dict) -> dict:
     """
     if not isinstance(skills, dict):
         return skills
+    _drop_category_label_duplicates(skills)
     from_categories = _category_skills(skills)
     skills["technical_skills"] = _union(skills, _TECHNICAL_BUCKETS) or from_categories
     skills["all_skills_raw"] = _union(skills, _ALL_BUCKETS) or from_categories
