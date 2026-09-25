@@ -56,6 +56,76 @@ resource "aws_iam_role_policy" "lambda_s3" {
   })
 }
 
+# ── Every extraction, in one table ───────────────────────────────────────────
+#
+# All products that call this engine (Hire, the website, matching) get their
+# extractions saved here — see store.py. The talent map and anything else that
+# needs the whole picture read this table instead of each product's own.
+# Encrypted, point-in-time recovery on, protected from accidental deletion.
+
+# The table was created by hand first so data could be moved into it before
+# this deploy; the import adopts it instead of trying to create it again.
+import {
+  to = aws_dynamodb_table.extractions
+  id = "resume-extractions"
+}
+
+resource "aws_dynamodb_table" "extractions" {
+  name                        = "resume-extractions"
+  billing_mode                = "PAY_PER_REQUEST"
+  hash_key                    = "id"
+  deletion_protection_enabled = true
+
+  attribute {
+    name = "id"
+    type = "S"
+  }
+  attribute {
+    name = "gsi1pk"
+    type = "S"
+  }
+  attribute {
+    name = "gsi1sk"
+    type = "S"
+  }
+
+  # "What is new since my cursor" — one range query.
+  global_secondary_index {
+    name            = "by-created"
+    hash_key        = "gsi1pk"
+    range_key       = "gsi1sk"
+    projection_type = "ALL"
+  }
+
+  ttl {
+    attribute_name = "ttl"
+    enabled        = true
+  }
+
+  point_in_time_recovery { enabled = true }
+  server_side_encryption { enabled = true }
+
+  tags = {
+    Project   = "blue-iq"
+    Purpose   = "resume-extractions"
+    DataClass = "candidate-pii"
+  }
+}
+
+resource "aws_iam_role_policy" "lambda_extractions" {
+  name = "lambda-write-extractions"
+  role = aws_iam_role.lambda.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect   = "Allow"
+      Action   = ["dynamodb:PutItem"]
+      Resource = aws_dynamodb_table.extractions.arn
+    }]
+  })
+}
+
 # ── S3 bucket for Lambda zip ─────────────────────────────────────────────────
 
 resource "aws_s3_bucket" "packages" {
@@ -133,6 +203,10 @@ resource "aws_lambda_function" "api" {
       # Mirrors the Function URL cors block below, so a local or non-Function-URL
       # run of the same image enforces the same origins.
       ALLOWED_ORIGINS = join(",", var.allowed_origins)
+
+      # Where every successful extraction is saved (store.py). Unset it to stop
+      # saving; uploads keep working either way.
+      EXTRACTIONS_TABLE = aws_dynamodb_table.extractions.name
     }
   }
 

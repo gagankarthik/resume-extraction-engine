@@ -5,11 +5,12 @@ from pathlib import Path
 
 import uvicorn
 from dotenv import load_dotenv
-from fastapi import Depends, FastAPI, File, HTTPException, Query, UploadFile
+from fastapi import Depends, FastAPI, File, HTTPException, Query, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 import filetypes
+import store
 from auth import TOKEN_HEADER, require_upload_token
 from extractor import extract_text
 from processor import process_resume
@@ -94,9 +95,11 @@ async def health():
 
 @app.post("/extract")
 async def extract_resume(
+    request: Request,
     file: UploadFile = File(...),
     client_id: str | None = Query(default=None, description="Optional client identifier for multi-tenant tracking"),
     project_id: str | None = Query(default=None, description="Optional project identifier for grouping extractions"),
+    source: str | None = Query(default=None, description="Which product is calling (e.g. hire, website, matching). Recorded with the saved extraction."),
     claims: dict | None = Depends(require_upload_token),
 ):
     # The upload ticket is verified before a byte is read: this route runs a
@@ -186,6 +189,23 @@ async def extract_resume(
         raise HTTPException(status_code=500, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"LLM extraction failed: {exc}") from exc
+
+    # --- Keep it ---
+    # Every product that calls this engine gets its extraction saved to one
+    # table, so the talent map (and anything else) reads a single source. A
+    # failed save is logged and never costs the caller their result.
+    if store.enabled():
+        await asyncio.to_thread(
+            store.save_extraction,
+            result,
+            source=source,
+            subject=(claims or {}).get("sub"),
+            origin=request.headers.get("origin"),
+            file_name=file.filename or "resume",
+            file_type=kind.key,
+            client_id=client_id,
+            project_id=project_id,
+        )
 
     return JSONResponse(content=result)
 
